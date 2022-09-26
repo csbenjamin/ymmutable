@@ -1,7 +1,7 @@
 {
   "name": "ymmutable",
   "version": "1.0.0",
-  "description": "Transforme yjs in immutable objects",
+  "description": "Transform yjs in immutable objects",
   "main": "lib/index.js",
   "scripts": {
     "test": "jest --config jestconfig.json",
