@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "description": "Transform yjs in immutable objects",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
-    "test": "jest --config jestconfig.json",
+    "test": "jest --watch --config jestconfig.json",
     "build": "tsc",
-    "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
+    "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test && npm run lint",
+    "prepublishOnly": "npm test",
     "preversion": "npm run lint",
     "version": "npm run format && git add -A src",
     "postversion": "git push && git push --tags"
@@ -36,6 +37,7 @@
   "homepage": "https://github.com/csbenjamin/ymmutable#readme",
   "devDependencies": {
     "@types/jest": "^29.0.3",
+    "@types/lodash": "^4.14.185",
     "jest": "^29.0.3",
     "prettier": "^2.7.1",
     "ts-essentials": "^9.3.0",
@@ -48,6 +50,7 @@
     "lib/**/*"
   ],
   "dependencies": {
+    "lodash": "^4.17.21",
     "yjs": "^13.5.41"
   }
 }
