@@ -1,6 +1,6 @@
 {
   "name": "@csbenjamin/ymmutable",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Transform yjs in immutable objects",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -10,8 +10,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test",
-    "preversion": "npm run lint",
+    "prepublishOnly-disabled": "npm test && npm run lint",
+    "preversion-disabled": "npm run lint",
     "version": "npm run format && git add -A src",
     "postversion": "git push && git push --tags"
   },

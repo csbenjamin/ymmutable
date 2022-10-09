@@ -56,11 +56,23 @@ function createHandle(key: string, _type: 'array' | 'object', result: any) {
 }
 
 export function Ymmutable<S = JSONObject>(setting: settingsType<S>, doc = new Doc()): ReturnValue<S> {
+  let destroyed = false;
   const result: ReturnValue<S> = {
     immutable: {} as any,
     mutate: (callback) => {
-      callback(proxy);
+      if (destroyed) return;
+      doc.transact(() => {
+        callback(proxy);
+      }, doc.clientID);
     },
+    destroy: () => {
+      destroyed = true;
+      for (const [key, value] of Object.entries(setting)) {
+        const yType = value === 'array' ? doc.getArray(key) : doc.getMap(key);
+        yType.unobserveDeep(handles[key]);
+      }
+      doc.destroy();
+    }
   };
   const handles: any = {};
   for (const [key, value] of Object.entries(setting)) {
@@ -116,9 +128,10 @@ type settingsType<T> = {
   [K in keyof T]: T[K] extends any[] ? 'array' : T[K] extends JSONObject ? 'object' : never;
 };
 
-type ReturnValue<S> = {
+export type ReturnValue<S> = {
   immutable: DeepReadonly<S>;
   mutate: (c: (d: S) => void) => void;
+  destroy: () => void;
 };
 
 type JSONValue = string | number | boolean | JSONObject | JSONArray;
@@ -152,7 +165,7 @@ function crdtValue(value: YArray<any> | YMap<any> | string | Uint8Array | boolea
 
 const yToWrappedCache = new WeakMap<YAbstractType<any> | Doc, any>();
 
-export function parseYjsReturnValue(value: any) {
+function parseYjsReturnValue(value: any) {
   if (value instanceof YAbstractType) {
     if (value instanceof YArray || value instanceof YMap) {
       if (!yToWrappedCache.has(value)) {
@@ -374,7 +387,7 @@ function propertyToNumber(p: string | number | symbol) {
   return p;
 }
 
-export function crdtArray<T>(initializer: T[], arr = new YArray<T>()) {
+function crdtArray<T>(initializer: T[], arr = new YArray<T>()) {
   const implementation = arrayImplementation(arr);
 
   const proxy = new Proxy(implementation as any, {
