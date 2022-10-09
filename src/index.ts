@@ -1,5 +1,14 @@
 import { DeepReadonly } from 'ts-essentials';
-import { AbstractType as YAbstractType, Array as YArray, Doc, Map as YMap, YArrayEvent, YMapEvent, YEvent } from 'yjs';
+import {
+  AbstractType as YAbstractType,
+  Array as YArray,
+  Doc,
+  Map as YMap,
+  YArrayEvent,
+  YMapEvent,
+  YEvent,
+  UndoManager
+} from "yjs";
 import { cloneDeepWith, cloneDeep } from 'lodash';
 
 const INTERNAL_SYMBOL = Symbol('INTERNAL_SYMBOL');
@@ -72,9 +81,11 @@ export function Ymmutable<S = JSONObject>(setting: settingsType<S>, doc = new Do
         yType.unobserveDeep(handles[key]);
       }
       doc.destroy();
-    }
+    },
+    undoManager: null as any
   };
   const handles: any = {};
+  const yTypes: any[] = [];
   for (const [key, value] of Object.entries(setting)) {
     if (value !== 'array' && value !== 'object') {
       throw new Error(`Invalid settings. Invalid value: settings.${key} = ${value}`);
@@ -83,7 +94,12 @@ export function Ymmutable<S = JSONObject>(setting: settingsType<S>, doc = new Do
     (result.immutable as any)[key] = clone(yType);
     handles[key] = createHandle(key, value, result);
     yType.observeDeep(handles[key]);
+    yTypes.push(yType);
   }
+  if (yTypes.length === 0) {
+    throw new Error('Invalid settings. It is empty');
+  }
+  result.undoManager = new UndoManager(yTypes, {trackedOrigins: new Set([doc.clientID])});
   const proxy = new Proxy({} as any, {
     set: () => {
       throw new Error('cannot set new elements on root doc');
@@ -132,6 +148,7 @@ export type ReturnValue<S> = {
   immutable: DeepReadonly<S>;
   mutate: (c: (d: S) => void) => void;
   destroy: () => void;
+  undoManager: UndoManager
 };
 
 type JSONValue = string | number | boolean | JSONObject | JSONArray;
