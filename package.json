@@ -1,5 +1,5 @@
 {
-  "name": "ymmutable",
+  "name": "@csbenjamin/ymmutable",
   "version": "1.0.0",
   "description": "Transform yjs in immutable objects",
   "main": "lib/index.js",
