@@ -20,7 +20,7 @@ store.mutate(data => {
   data.todoList.push({descript: 'Share this with the World', done: false});
 });
 
-expect(store.immutable.someObject).equal({someObject: true});
+expect(store.immutable.someObject).equal({hello: 'World!'});
 expect(store.immutable.todoList).equal([{descript: 'Share this with the World', done: false}]);
 
 store.mutate(data => {
