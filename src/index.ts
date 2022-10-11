@@ -1,15 +1,15 @@
-import { DeepReadonly } from 'ts-essentials';
+import {DeepReadonly} from 'ts-essentials';
 import {
   AbstractType as YAbstractType,
   Array as YArray,
   Doc,
   Map as YMap,
+  UndoManager,
   YArrayEvent,
-  YMapEvent,
   YEvent,
-  UndoManager
-} from "yjs";
-import { cloneDeepWith, cloneDeep } from 'lodash';
+  YMapEvent
+} from 'yjs';
+import {cloneDeep, cloneDeepWith} from 'lodash';
 
 const INTERNAL_SYMBOL = Symbol('INTERNAL_SYMBOL');
 
@@ -64,43 +64,25 @@ function createHandle(key: string, _type: 'array' | 'object', result: any) {
   };
 }
 
-export function Ymmutable<S = JSONObject>(setting: settingsType<S>, doc = new Doc()): ReturnValue<S> {
-  let destroyed = false;
-  const result: ReturnValue<S> = {
-    immutable: {} as any,
-    mutate: (callback) => {
-      if (destroyed) return;
-      doc.transact(() => {
-        callback(proxy);
-      }, doc.clientID);
-    },
-    destroy: () => {
-      destroyed = true;
-      for (const [key, value] of Object.entries(setting)) {
-        const yType = value === 'array' ? doc.getArray(key) : doc.getMap(key);
-        yType.unobserveDeep(handles[key]);
-      }
-      doc.destroy();
-    },
-    undoManager: null as any
-  };
-  const handles: any = {};
+export function Ymmutable<S = JSONObject>(settings: settingsType<S>, doc = new Doc()): YmmutableReturn<S> {
+  const handlers: any = {};
+  const result = new YmmutableReturnValue<S>(doc, handlers, null, settings);
   const yTypes: any[] = [];
-  for (const [key, value] of Object.entries(setting)) {
+  for (const [key, value] of Object.entries(settings)) {
     if (value !== 'array' && value !== 'object') {
       throw new Error(`Invalid settings. Invalid value: settings.${key} = ${value}`);
     }
     const yType = value === 'array' ? doc.getArray(key) : doc.getMap(key);
     (result.immutable as any)[key] = clone(yType);
-    handles[key] = createHandle(key, value, result);
-    yType.observeDeep(handles[key]);
+    handlers[key] = createHandle(key, value, result);
+    yType.observeDeep(handlers[key]);
     yTypes.push(yType);
   }
   if (yTypes.length === 0) {
     throw new Error('Invalid settings. It is empty');
   }
   result.undoManager = new UndoManager(yTypes, {trackedOrigins: new Set([doc.clientID])});
-  const proxy = new Proxy({} as any, {
+  result.proxy = new Proxy({} as any, {
     set: () => {
       throw new Error('cannot set new elements on root doc');
     },
@@ -109,11 +91,11 @@ export function Ymmutable<S = JSONObject>(setting: settingsType<S>, doc = new Do
         return undefined;
         // throw new Error("get non string parameter");
       }
-      switch ((setting as any)[p]) {
+      switch ((settings as any)[p]) {
         case 'array':
-          return parseYjsReturnValue(doc.getArray(p));
+          return yjsToProxy(doc.getArray(p));
         case 'object':
-          return parseYjsReturnValue(doc.getMap(p));
+          return yjsToProxy(doc.getMap(p));
       }
       return undefined;
     },
@@ -144,14 +126,47 @@ type settingsType<T> = {
   [K in keyof T]: T[K] extends any[] ? 'array' : T[K] extends JSONObject ? 'object' : never;
 };
 
-export type ReturnValue<S> = {
-  immutable: DeepReadonly<S>;
-  mutate: (c: (d: S) => void) => void;
-  destroy: () => void;
-  undoManager: UndoManager
-};
+export interface YmmutableReturn<S> {
+  readonly immutable: DeepReadonly<S>;
+  readonly undoManager: UndoManager;
+  readonly doc: Doc;
+  mutate(callback: (d: S) => void): void;
+  destroy(): void;
+}
 
-type JSONValue = string | number | boolean | JSONObject | JSONArray;
+class YmmutableReturnValue<S> implements YmmutableReturn<S>{
+  public immutable: DeepReadonly<S> = {} as any;
+  public undoManager: UndoManager = null as any;
+  protected destroyed = false;
+  constructor(
+    public doc: Doc,
+    public handles: any,
+    public proxy: any,
+    protected setting: any
+  ) {
+  }
+  mutate(callback: (d: S) => void) {
+    if (this.destroyed) {
+      return;
+    }
+    this.doc.transact(() => {
+      callback(this.proxy);
+    }, this.doc.clientID);
+  }
+  destroy() {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+    for (const [key, value] of Object.entries(this.setting)) {
+      const yType = value === 'array' ? this.doc.getArray(key) : this.doc.getMap(key);
+      yType.unobserveDeep(this.handles[key]);
+    }
+    this.doc.destroy();
+  }
+}
+
+type JSONValue = string | number | boolean | JSONObject | JSONArray | Uint8Array;
 
 interface JSONObject {
   [x: string]: JSONValue;
@@ -159,22 +174,22 @@ interface JSONObject {
 
 interface JSONArray extends Array<JSONValue> {}
 
-function crdtValue(value: YArray<any> | YMap<any> | string | Uint8Array | boolean | number | unknown) {
+function valueToProxy(value: YArray<any> | YMap<any> | string | Uint8Array | boolean | number | unknown) {
   if (value === null || value === undefined) {
     return value;
   }
   if (value instanceof YArray) {
-    return crdtArray([], value);
+    return arrayToProxyArray([], value);
   } else if (value instanceof YMap) {
-    return crdtObject({}, value);
+    return objectToProxyObject({}, value);
   } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value; // TODO
   } else if (Array.isArray(value)) {
-    return crdtArray(value as any[]);
+    return arrayToProxyArray(value as any[]);
   } else if (value instanceof Uint8Array) {
     return value;
   } else if (typeof value === 'object') {
-    return crdtObject(value as any);
+    return objectToProxyObject(value as any);
   } else {
     throw new Error('invalid');
   }
@@ -182,11 +197,11 @@ function crdtValue(value: YArray<any> | YMap<any> | string | Uint8Array | boolea
 
 const yToWrappedCache = new WeakMap<YAbstractType<any> | Doc, any>();
 
-function parseYjsReturnValue(value: any) {
+function yjsToProxy(value: any) {
   if (value instanceof YAbstractType) {
     if (value instanceof YArray || value instanceof YMap) {
       if (!yToWrappedCache.has(value)) {
-        const wrapped = crdtValue(value);
+        const wrapped = valueToProxy(value);
         yToWrappedCache.set(value, wrapped);
       }
       value = yToWrappedCache.get(value);
@@ -203,18 +218,19 @@ function parseYjsReturnValue(value: any) {
   return value;
 }
 
-function crdtObject(initializer: any, map = new YMap<any>()) {
+function objectToProxyObject(initializer: any, map = new YMap<any>()) {
   const proxy = new Proxy({} as any, {
     set: (target, p, value) => {
       if (typeof p !== 'string') {
         throw new Error();
       }
-      const wrapped = crdtValue(value); // TODO: maybe set cache
+      const wrapped = valueToProxy(value); // TODO: maybe set cache
+      let valueToSet = getYjsValue(wrapped) || wrapped;
 
       if (wrapped instanceof YAbstractType && wrapped.parent) {
         throw new Error('Not supported: reassigning object that already occurs in the tree.');
       }
-      map.set(p, wrapped);
+      map.set(p, valueToSet);
       return true;
     },
     get: (target, p) => {
@@ -226,7 +242,7 @@ function crdtObject(initializer: any, map = new YMap<any>()) {
         // throw new Error("get non string parameter");
       }
       let ret = map.get(p);
-      ret = parseYjsReturnValue(ret);
+      ret = yjsToProxy(ret);
       return ret;
     },
     deleteProperty: (target, p) => {
@@ -280,13 +296,13 @@ function arrayImplementation<T>(arr: YArray<T>) {
   const slice = function slice(this: any) {
     const items = arr.slice.bind(arr).apply(arr, arguments as any);
     return items.map((item) => {
-      return parseYjsReturnValue(item);
+      return yjsToProxy(item);
     });
   } as T[]['slice'];
 
   const wrapItems = function wrapItems(items: any) {
     return items.map((item: any) => {
-      const wrapped = crdtValue(item as any); // TODO
+      const wrapped = valueToProxy(item as any); // TODO
       let valueToSet = getYjsValue(wrapped) || wrapped;
       if (valueToSet instanceof YAbstractType && valueToSet.parent) {
         throw new Error('Not supported: reassigning object that already occurs in the tree.');
@@ -404,7 +420,7 @@ function propertyToNumber(p: string | number | symbol) {
   return p;
 }
 
-function crdtArray<T>(initializer: T[], arr = new YArray<T>()) {
+function arrayToProxyArray<T>(initializer: T[], arr = new YArray<T>()) {
   const implementation = arrayImplementation(arr);
 
   const proxy = new Proxy(implementation as any, {
@@ -413,7 +429,7 @@ function crdtArray<T>(initializer: T[], arr = new YArray<T>()) {
       if (typeof p !== 'number') {
         throw new Error();
       }
-      const wrapped = crdtValue(value as any);
+      const wrapped = valueToProxy(value as any);
       const toSet = getYjsValue(wrapped) || wrapped;
       arr.delete(p, 1);
       arr.insert(p, [toSet]);
@@ -431,7 +447,7 @@ function crdtArray<T>(initializer: T[], arr = new YArray<T>()) {
 
       if (typeof p === 'number') {
         let ret = arr.get(p) as any;
-        ret = parseYjsReturnValue(ret);
+        ret = yjsToProxy(ret);
         return ret;
       }
 
