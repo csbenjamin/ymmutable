@@ -10,20 +10,25 @@ import {
   YMapEvent
 } from 'yjs';
 import {cloneDeep, cloneDeepWith} from 'lodash';
+import {debounce, Observable, Subject} from 'rxjs';
 
 const INTERNAL_SYMBOL = Symbol('INTERNAL_SYMBOL');
 
 function clone<T>(value: T): T {
   return cloneDeepWith(value, customizer);
   function customizer(value2: any) {
+    if (!value2) {
+      return value2;
+    }
     if (value2.toJSON) {
       return cloneDeep(value2.toJSON());
     }
   }
 }
 
-function createHandle(key: string, _type: 'array' | 'object', result: any) {
+function createHandle(key: string, _type: 'array' | 'object', result: YmmutableReturnValue<any>) {
   return function handle(events: YEvent<any>[]) {
+    const oldValue = result.immutable;
     result.immutable = { ...result.immutable };
     result.immutable[key] = _type === 'array' ? [...result.immutable[key]] : { ...result.immutable[key] };
     for (const event of events) {
@@ -61,6 +66,7 @@ function createHandle(key: string, _type: 'array' | 'object', result: any) {
         }
       }
     }
+    result.changeSubject.next({currentValue: result.immutable, oldValue});
   };
 }
 
@@ -123,7 +129,7 @@ export function Ymmutable<S = JSONObject>(settings: settingsType<S>, doc = new D
 }
 
 type settingsType<T> = {
-  [K in keyof T]: T[K] extends any[] ? 'array' : T[K] extends JSONObject ? 'object' : never;
+  [K in keyof T]: T[K] extends any[]|undefined ? 'array' : T[K] extends JSONObject|undefined ? 'object' : never;
 };
 
 export interface YmmutableReturn<S> {
@@ -132,12 +138,31 @@ export interface YmmutableReturn<S> {
   readonly doc: Doc;
   mutate(callback: (d: S) => void): void;
   destroy(): void;
+  change: Observable<{ currentValue: S, oldValue: S }>
 }
 
 class YmmutableReturnValue<S> implements YmmutableReturn<S>{
   public immutable: DeepReadonly<S> = {} as any;
   public undoManager: UndoManager = null as any;
   protected destroyed = false;
+
+  changeSubject = new Subject<{ currentValue: S, oldValue: S }>()
+  protected oldestValue: any = null;
+  change = this.changeSubject.asObservable().pipe(debounce((value) => {
+    if (this.oldestValue === null) {
+      this.oldestValue = value.oldValue;
+    }
+    return new Observable(subscriber => {
+      let timeout = setTimeout(() => {
+        value.oldValue = this.oldestValue;
+        this.oldestValue = null;
+        subscriber.next();
+      }, 0);
+      return () => {
+        clearTimeout(timeout);
+      }
+    })
+  }))
   constructor(
     public doc: Doc,
     public handles: any,
