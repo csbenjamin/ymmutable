@@ -1,0 +1,10 @@
+/demo
+/src
+/node_modules
+/coverage
+.idea
+.gitignore
+.prettierrc
+*.test.ts
+vite.config.mts
+jestconfig.json
