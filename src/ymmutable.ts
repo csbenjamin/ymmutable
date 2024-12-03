@@ -9,6 +9,7 @@ interface YmmutableConstructorOptions {
   debounceDuration?: number;
   pathMap?: WeakMap<any, { parent: any; key: number | string | null }>;
   ymmutableMap?: WeakMap<any, Ymmutable<any>>;
+  undoManager?: YMultiDocUndoManager;
 }
 
 export class Ymmutable<S extends Object> implements YDocType {
@@ -29,6 +30,7 @@ export class Ymmutable<S extends Object> implements YDocType {
   protected oldestValue: any = null;
   protected pathMap: WeakMap<any, { parent: any; key: number | string | null }>;
   protected ymmutableMap: WeakMap<any, Ymmutable<any>>;
+  protected undoManager?: YMultiDocUndoManager
 
   change = this.changeSubject.asObservable().pipe(
     debounce((value) => {
@@ -50,11 +52,11 @@ export class Ymmutable<S extends Object> implements YDocType {
   );
 
   constructor(
-    protected undoManager: YMultiDocUndoManager,
     {
       debounceDuration = 2000,
       pathMap = new WeakMap<any, { parent: any, key: number | string | null }>(),
-      ymmutableMap = new WeakMap<any, Ymmutable<any>>()
+      ymmutableMap = new WeakMap<any, Ymmutable<any>>(),
+      undoManager
     }: YmmutableConstructorOptions = {}
   ) {
     this.pathMap = pathMap;
@@ -96,8 +98,12 @@ export class Ymmutable<S extends Object> implements YDocType {
 
     yRootMap.observeDeep(handler);
 
-    undoManager.addToScope(yRootMap);
-    undoManager.addTrackedOrigin(this);
+    if (undoManager) {
+      undoManager.addToScope(yRootMap);
+      undoManager.addTrackedOrigin(this);
+      this.undoManager = undoManager
+    }
+
 
     this.handle = handler;
 
@@ -269,6 +275,9 @@ export class Ymmutable<S extends Object> implements YDocType {
     }
     this.destroyed = true;
     const yRootMap = this.doc.getMap();
+    if (this.undoManager) {
+      this.undoManager.removeTrackedOrigin(this);
+    }
     yRootMap.unobserveDeep(this.handle);
     this.doc.destroy();
   }

@@ -27,7 +27,7 @@ describe('Ymmutable', () => {
 
     beforeEach(() => {
         undoManager = new YMultiDocUndoManager();
-        ymmutable = new Ymmutable(undoManager);
+        ymmutable = new Ymmutable({ undoManager });
     });
 
     afterEach(() => {
@@ -75,7 +75,7 @@ describe('Ymmutable', () => {
     });
 
     it('applyUpdates should apply updates from another instance', () => {
-        const ymmutable2 = new Ymmutable<TestData>(undoManager);
+        const ymmutable2 = new Ymmutable<TestData>({ undoManager });
 
         const updates: Uint8Array[] = [];
         ymmutable.onUpdate.subscribe((update) => {
@@ -137,7 +137,7 @@ describe('Ymmutable', () => {
     });
 
     it('should respect custom debounceDuration', async () => {
-        ymmutable = new Ymmutable(undoManager, { debounceDuration: 500 });
+        ymmutable = new Ymmutable({ undoManager, debounceDuration: 500 });
 
         const onUpdateSpy = jest.fn();
         ymmutable.onUpdate.subscribe(onUpdateSpy);
@@ -186,7 +186,7 @@ describe('Ymmutable', () => {
     });
 
     it('should queue incoming updates if there is a pending local change', () => {
-        const ymmutable2 = new Ymmutable<TestData>(undoManager);
+        const ymmutable2 = new Ymmutable<TestData>({ undoManager });
 
         const updates2: Uint8Array[] = [];
         ymmutable2.onUpdate.subscribe((update) => {
@@ -353,7 +353,7 @@ describe('Ymmutable', () => {
     });
 
     it('should work with generic type parameter S', () => {
-        const ymmutableTyped = new Ymmutable<TestData>(undoManager);
+        const ymmutableTyped = new Ymmutable<TestData>({ undoManager });
 
         ymmutableTyped.mutate((d) => {
             d.foo = 'hello';
@@ -414,7 +414,7 @@ describe('Ymmutable', () => {
     });
 
     it('should handle simultaneous mutations and updates', () => {
-        const ymmutable2 = new Ymmutable<TestData>(undoManager);
+        const ymmutable2 = new Ymmutable<TestData>({ undoManager });
 
         const updates1: Uint8Array[] = [];
         const updates2: Uint8Array[] = [];
