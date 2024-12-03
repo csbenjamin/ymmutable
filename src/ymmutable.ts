@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { Observable, ReplaySubject, Subject } from 'rxjs';
+import { merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import { debounce, debounceTime } from 'rxjs/operators';
 import { YMultiDocUndoManager } from 'y-utility/y-multidoc-undomanager';
 import { OperationsRecorderProxy, OperationsCompressor, OperationsApplierJson, OperationsApplierYjs, YDocType } from '.';
@@ -30,7 +30,8 @@ export class Ymmutable<S extends Object> implements YDocType {
   protected oldestValue: any = null;
   protected pathMap: WeakMap<any, { parent: any; key: number | string | null }>;
   protected ymmutableMap: WeakMap<any, Ymmutable<any>>;
-  protected undoManager?: YMultiDocUndoManager
+  protected undoManager?: YMultiDocUndoManager;
+  protected flushSubject = new Subject<void>();
 
   change = this.changeSubject.asObservable().pipe(
     debounce((value) => {
@@ -71,6 +72,9 @@ export class Ymmutable<S extends Object> implements YDocType {
     const opApplierJson = new OperationsApplierJson(pathMap);
     const opApplierYjs = new OperationsApplierYjs();
     this.proxy.operations.subscribe((op) => {
+      if (this.destroyed) {
+        return;
+      }
       opCompressor.addOperation(op);
       const oldValue = this.immutable;
       this.immutable = opApplierJson.applyOperations(this.immutable, [op]);
@@ -78,8 +82,11 @@ export class Ymmutable<S extends Object> implements YDocType {
       this.ymmutableMap.set(this.immutable, this);
       this.changeSubject.next({ currentValue: this.immutable, oldValue });
     });
-    this.debounceSubject.pipe(debounceTime(debounceDuration)).subscribe(() => {
+    merge(this.debounceSubject.pipe(debounceTime(debounceDuration)), this.flushSubject).subscribe(() => {
       this.isPending = false;
+      if (this.destroyed) {
+        return;
+      }
       if (opCompressor.spliceOperations.length + opCompressor.setOperations.length > 0) {
         this.doc.transact(() => {
           opApplierYjs.applyOperations(yRootMap, opCompressor.spliceOperations);
@@ -108,6 +115,9 @@ export class Ymmutable<S extends Object> implements YDocType {
     this.handle = handler;
 
     this.doc.on('updateV2', (update: Uint8Array, origin: any) => {
+      if (this.destroyed) {
+        return;
+      }
       if (origin !== this.remoteReference) {
         this._onUpdate.next(update);
       }
@@ -165,6 +175,10 @@ export class Ymmutable<S extends Object> implements YDocType {
       return newObj;
     }
     return obj;
+  }
+
+  public flush() {
+    this.flushSubject.next();
   }
 
   // Method to create a handler for observeDeep
