@@ -1,20 +1,20 @@
 {
   "name": "@csbenjamin/ymmutable",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Transform yjs in immutable objects",
   "main": "lib/index.js",
   "module": "lib/index.mjs",
   "types": "lib/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
+      "require": "./lib/index.js",
+      "import": "./lib/index.mjs",
+      "types": "./lib/index.d.ts"
     }
   },
   "scripts": {
     "test": "jest --watch --config jestconfig.json",
-    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build": "tsup src/index.ts --format cjs,esm --dts --out-dir lib",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
     "prepare": "npm run build",
