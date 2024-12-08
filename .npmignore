@@ -8,3 +8,4 @@
 *.test.ts
 vite.config.mts
 jestconfig.json
+tsconfig.json
