@@ -255,7 +255,11 @@ export class Ymmutable<S extends Object> implements YDocType {
     }
     this.debounceSubject.next();
     this.isPending = true;
+    this.proxy.abstractTypeFound = false;
     callback(this.proxy.proxy);
+    if (this.proxy.abstractTypeFound) {
+      this.flush();
+    }
   }
 
   setRoot(data: S) {

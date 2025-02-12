@@ -45,7 +45,7 @@ export class OperationsApplierJson implements OperationsApplier {
             }
             return obj;
         }
-        if (typeof obj === 'object' && obj !== null) {
+        if (typeof obj === 'object' && obj !== null && obj.constructor === Object) {
             obj = { ...obj };
             for (const key of Object.keys(obj)) {
                 obj[key] = this.deepCloneSettingMap(obj[key]);

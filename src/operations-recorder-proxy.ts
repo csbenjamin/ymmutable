@@ -1,5 +1,6 @@
 import { Subject } from 'rxjs';
 import { Operation, OperationsRecorderProxyType } from './types';
+import { AbstractType } from 'yjs';
 
 export class OperationsRecorderProxy<T extends object> implements OperationsRecorderProxyType<T> {
     public proxy: T;
@@ -7,6 +8,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
     private _operations = new Subject<Operation>();
     public operations = this._operations.asObservable();
     private proxyCache: WeakMap<object, any>;
+    public abstractTypeFound = false;
 
     constructor(initialObject: T) {
         // Faz uma cópia profunda para evitar mutações no objeto original
@@ -32,6 +34,9 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
         }
         if (Array.isArray(obj)) {
             return obj.map(item => this.deepClone(item));
+        }
+        if (obj instanceof AbstractType) {
+            this.abstractTypeFound = true;
         }
         if (obj.constructor !== Object) {
             // Não clona objetos que não são literalmente Object
@@ -96,13 +101,10 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                                 // transform the unshift operation into a splice operation
                                 spliceArgs = [0, 0, ...args];
                             }
-                            const itensToAdd = spliceArgs.slice(2);
-                            if (itensToAdd.length > 0) {
-                                for (let i = 0; i < itensToAdd.length; i++) {
-                                    let obj = itensToAdd[i] && itensToAdd[i].__target ? itensToAdd[i].__target : itensToAdd[i];
-                                    spliceArgs[i + 2] = this.deepClone(obj);
-                                }
+                            for (let i = 2; i < spliceArgs.length; i++) {
+                                spliceArgs[i] = this.deepClone(spliceArgs[i]);
                             }
+
                             let result: any = obj.splice.apply(obj, spliceArgs as any);
                             const [start, deleteCount = 0, ...items] = spliceArgs;
                             if (deleteCount > 0) {
