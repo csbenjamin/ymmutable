@@ -126,6 +126,9 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                 return value;
             },
             set: (obj, prop, value) => {
+                if (obj[prop] === value) {
+                    return true;
+                }
                 value = this.deepClone(value);
 
                 if (prop === 'length' && Array.isArray(obj)) {
