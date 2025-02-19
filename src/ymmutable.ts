@@ -296,6 +296,9 @@ export class Ymmutable<S extends Object> implements YDocType {
     if (this.undoManager) {
       this.undoManager.removeTrackedOrigin(this);
     }
+    this.flushSubject.complete();
+    this.changeSubject.complete();
+    this._onUpdate.complete();
     yRootMap.unobserveDeep(this.handle);
     this.doc.destroy();
   }
