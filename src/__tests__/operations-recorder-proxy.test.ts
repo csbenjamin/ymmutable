@@ -6,7 +6,7 @@ describe('OperationsRecorderProxy', () => {
     let operations: Operation[];
 
     beforeEach(() => {
-        initialObject = { a: 1, b: { c: 2 }, d: [3, 4], e: [{ f: 5 }], g: [{id: 1}, {id: 3}, {id: 4}, {id: 5}, {id: 2}] };
+        initialObject = { a: 1, b: { c: 2 }, d: [3, 4], f: [4, 3], e: [{ f: 5 }], g: [{ id: 1 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 2 }] };
         objectProxy = new OperationsRecorderProxy(initialObject);
         operations = [];
         objectProxy.operations.subscribe(op => operations.push(op));
@@ -133,7 +133,7 @@ describe('OperationsRecorderProxy', () => {
         }).toThrow('Key not found');
     });
 
-    it ('should generate splice operations for array length property less than current size', () => {
+    it('should generate splice operations for array length property less than current size', () => {
         objectProxy.proxy.d.length = 1;
         expect(operations).toEqual([{ operation: 'delete', path: ['d'], position: 1, count: 1 }]);
     });
@@ -150,7 +150,7 @@ describe('OperationsRecorderProxy', () => {
     });
 
     it('should not track non-intercepted array methods like forEach', () => {
-        objectProxy.proxy.d.forEach(() => {});
+        objectProxy.proxy.d.forEach(() => { });
         expect(operations).toEqual([]);
     });
 
@@ -163,14 +163,15 @@ describe('OperationsRecorderProxy', () => {
     });
 
     it('should track array sort operations', () => {
-        objectProxy.proxy.d.sort();
+        objectProxy.proxy.f.sort();
+        console.log(operations);
         expect(operations).toEqual([
-            { operation: 'set', path: ['d', 0], value: 3 },
-            { operation: 'set', path: ['d', 1], value: 4 }
+            { operation: 'set', path: ['f', 0], value: 3 },
+            { operation: 'set', path: ['f', 1], value: 4 }
         ]);
     });
 
-    it ('should work with sort method with a compare function', () => {
+    it('should work with sort method with a compare function', () => {
         objectProxy.proxy.g.sort((a: any, b: any) => a.id - b.id);
         expect(operations).toEqual([
             { operation: 'set', path: ['g', 0], value: { id: 1 } },

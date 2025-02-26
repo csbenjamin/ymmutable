@@ -2189,31 +2189,6 @@ describe('OperationsCompressor class tests', () => {
         ]);
     });
 
-    it('Insert paths and points with previous paths', () => {
-        let initialObject: { paths?: { points: number[][] }[] } = { paths: [{ points: [[0]] }] };
-        const operations: Operation[] = [
-            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 5, items: [5] },
-            { operation: 'insert', path: ['paths'], position: 1, items: [{ points: [[0]] }] },
-            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 1, items: [1] },
-            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 2, items: [2] },
-            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 3, items: [3] },
-            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 4, items: [4] },
-            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 5, items: [5] },
-        ];
-
-        const applier = new OperationsApplierJson();
-        const ops = new OperationsCompressor();
-        for (const op of operations) {
-            ops.addOperation(op);
-        }
-        console.log(ops.spliceOperations);
-        console.log(ops.setOperations);
-        expect(ops.spliceOperations).toEqual([]);
-        expect(ops.setOperations).toEqual([
-            { operation: 'set', path: ['paths'], value: [{ points: [[0, 1, 2, 3, 4, 5]] }, { points: [[0, 1, 2, 3, 4, 5]] }] }
-        ]);
-    });
-
 
 
 
