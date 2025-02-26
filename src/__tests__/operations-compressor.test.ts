@@ -392,88 +392,88 @@ describe('OperationsCompressor class tests', () => {
     });
 
     it('Complex interaction between isnert and delete operations with cancelation 1', () => {
-        const initialObject = { numbers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]}
+        const initialObject = { numbers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] }
 
         const operations: Operation[] = [
             {
-              operation: 'insert',
-              path: [ 'numbers' ],
-              position: 2,
-              items: [ 208, 210, 400 ]
+                operation: 'insert',
+                path: ['numbers'],
+                position: 2,
+                items: [208, 210, 400]
             },
-            { operation: 'delete', path: [ 'numbers' ], position: 3, count: 2 },
+            { operation: 'delete', path: ['numbers'], position: 3, count: 2 },
             {
-              operation: 'insert',
-              path: [ 'numbers' ],
-              position: 14,
-              items: [ 867, 0, 474 ]
+                operation: 'insert',
+                path: ['numbers'],
+                position: 14,
+                items: [867, 0, 474]
             },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
             {
-              operation: 'insert',
-              path: [ 'numbers' ],
-              position: 10,
-              items: [ 149, 913, 187 ]
+                operation: 'insert',
+                path: ['numbers'],
+                position: 10,
+                items: [149, 913, 187]
             },
-            
-            
-            { operation: 'delete', path: [ 'numbers' ], position: 7, count: 1 },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
-           
-          ];
 
-          // Use Operations class
+
+            { operation: 'delete', path: ['numbers'], position: 7, count: 1 },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
+
+        ];
+
+        // Use Operations class
         const ops = new OperationsCompressor();
         const applier = new OperationsApplierJson();
         ops.addOperation(operations[0]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208, 210, 400 ] }
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208, 210, 400] }
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 210, 400, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[1]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[2]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[3]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 6, 7, 8, 12, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[4]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
-            { operation: 'insert', path: [ 'numbers' ], position: 10, items: [ 149, 913, 187 ] },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
+            { operation: 'insert', path: ['numbers'], position: 10, items: [149, 913, 187] },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 6, 7, 8, 149, 913, 187, 12, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[5]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
-            { operation: 'insert', path: [ 'numbers' ], position: 10, items: [ 149, 913, 187 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 7, count: 1 },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
+            { operation: 'insert', path: ['numbers'], position: 10, items: [149, 913, 187] },
+            { operation: 'delete', path: ['numbers'], position: 7, count: 1 },
         ]);
         // { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 7, 8, 149, 913, 187, 12, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[6]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
-            { operation: 'insert', path: [ 'numbers' ], position: 10, items: [ 149 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 7, count: 1 },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 1 },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
+            { operation: 'insert', path: ['numbers'], position: 10, items: [149] },
+            { operation: 'delete', path: ['numbers'], position: 7, count: 1 },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 1 },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 7, 8, 149, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
 
@@ -489,88 +489,88 @@ describe('OperationsCompressor class tests', () => {
         expect(classResult).toEqual(originalResult);
     })
     it('Complex interaction between isnert and delete operations with cancelation 1', () => {
-        const initialObject = { numbers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]}
+        const initialObject = { numbers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] }
 
         const operations: Operation[] = [
             {
-              operation: 'insert',
-              path: [ 'numbers' ],
-              position: 2,
-              items: [ 208, 210, 400 ]
+                operation: 'insert',
+                path: ['numbers'],
+                position: 2,
+                items: [208, 210, 400]
             },
-            { operation: 'delete', path: [ 'numbers' ], position: 3, count: 2 },
+            { operation: 'delete', path: ['numbers'], position: 3, count: 2 },
             {
-              operation: 'insert',
-              path: [ 'numbers' ],
-              position: 14,
-              items: [ 867, 0, 474 ]
+                operation: 'insert',
+                path: ['numbers'],
+                position: 14,
+                items: [867, 0, 474]
             },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
             {
-              operation: 'insert',
-              path: [ 'numbers' ],
-              position: 10,
-              items: [ 149, 913, 187 ]
+                operation: 'insert',
+                path: ['numbers'],
+                position: 10,
+                items: [149, 913, 187]
             },
-            
-            
-            { operation: 'delete', path: [ 'numbers' ], position: 7, count: 1 },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
-           
-          ];
 
-          // Use Operations class
+
+            { operation: 'delete', path: ['numbers'], position: 7, count: 1 },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
+
+        ];
+
+        // Use Operations class
         const ops = new OperationsCompressor();
         const applier = new OperationsApplierJson();
         ops.addOperation(operations[0]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208, 210, 400 ] }
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208, 210, 400] }
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 210, 400, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[1]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[2]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[3]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 6, 7, 8, 12, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[4]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
-            { operation: 'insert', path: [ 'numbers' ], position: 10, items: [ 149, 913, 187 ] },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
+            { operation: 'insert', path: ['numbers'], position: 10, items: [149, 913, 187] },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 6, 7, 8, 149, 913, 187, 12, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[5]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
-            { operation: 'insert', path: [ 'numbers' ], position: 10, items: [ 149, 913, 187 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 7, count: 1 },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
+            { operation: 'insert', path: ['numbers'], position: 10, items: [149, 913, 187] },
+            { operation: 'delete', path: ['numbers'], position: 7, count: 1 },
         ]);
         // { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 7, 8, 149, 913, 187, 12, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
         ops.addOperation(operations[6]);
         expect(ops.spliceOperations).toEqual([
-            { operation: 'insert', path: [ 'numbers' ], position: 2, items: [ 208 ] },
-            { operation: 'insert', path: [ 'numbers' ], position: 14, items: [ 867, 0, 474 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 3 },
-            { operation: 'insert', path: [ 'numbers' ], position: 10, items: [ 149 ] },
-            { operation: 'delete', path: [ 'numbers' ], position: 7, count: 1 },
-            { operation: 'delete', path: [ 'numbers' ], position: 10, count: 1 },
+            { operation: 'insert', path: ['numbers'], position: 2, items: [208] },
+            { operation: 'insert', path: ['numbers'], position: 14, items: [867, 0, 474] },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 3 },
+            { operation: 'insert', path: ['numbers'], position: 10, items: [149] },
+            { operation: 'delete', path: ['numbers'], position: 7, count: 1 },
+            { operation: 'delete', path: ['numbers'], position: 10, count: 1 },
         ]);
         expect(applier.applyOperations(initialObject, ops.spliceOperations)).toEqual({ numbers: [0, 1, 208, 2, 3, 4, 5, 7, 8, 149, 867, 0, 474, 13, 14, 15, 16, 17, 18, 19] });
 
@@ -586,7 +586,7 @@ describe('OperationsCompressor class tests', () => {
         expect(classResult).toEqual(originalResult);
     })
     it('Complex interaction between isnert and delete operations with cancelation 2', () => {
-        const initialObject = { numbers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]}
+        const initialObject = { numbers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] }
 
         const operations: Operation[] = [
             { operation: 'delete', path: ['numbers'], position: 0, count: 2 }, // ok
@@ -625,7 +625,7 @@ describe('OperationsCompressor class tests', () => {
             { operation: 'insert', path: ['numbers'], position: 7, items: [297] }
         ];
 
-          // Use Operations class
+        // Use Operations class
         const ops = new OperationsCompressor();
         const applier = new OperationsApplierJson();
         for (let i = 0; i < 21; i++) {
@@ -656,9 +656,9 @@ describe('OperationsCompressor class tests', () => {
             { operation: 'delete', path: ['numbers'], position: 5, count: 1 },
             { operation: 'insert', path: ['numbers'], position: 5, items: [313, 64] },
             { operation: 'insert', path: ['numbers'], position: 12, items: [225] },
-          ];
+        ];
 
-          expect(ops.spliceOperations).toEqual(op2);
+        expect(ops.spliceOperations).toEqual(op2);
 
         for (let i = 22; i < operations.length; i++) {
             const op = operations[i];
@@ -1991,7 +1991,7 @@ describe('OperationsCompressor class tests', () => {
         const initialObject = { items: [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }] };
 
         const operations: Operation[] = [
-            { operation: 'set', path: ['items'], value: [{ id: 3, name: 'Pedro' }, {id: 5, name: 'Cristiano'}] },
+            { operation: 'set', path: ['items'], value: [{ id: 3, name: 'Pedro' }, { id: 5, name: 'Cristiano' }] },
             { operation: 'delete', path: ['items'], position: 0, count: 1 },
         ];
 
@@ -2002,7 +2002,7 @@ describe('OperationsCompressor class tests', () => {
         }
 
         expect(ops.setOperations).toEqual([
-            { operation: 'set', path: ['items'], value: [{id: 5, name: 'Cristiano'}] }
+            { operation: 'set', path: ['items'], value: [{ id: 5, name: 'Cristiano' }] }
         ]);
         expect(ops.spliceOperations).toEqual([]);
 
@@ -2023,7 +2023,7 @@ describe('OperationsCompressor class tests', () => {
 
         const operations: Operation[] = [
             { operation: 'delete', path: ['items'], position: 0, count: 1 },
-            { operation: 'set', path: ['items'], value: [{ id: 3, name: 'Pedro' }, {id: 5, name: 'Cristiano'}] },
+            { operation: 'set', path: ['items'], value: [{ id: 3, name: 'Pedro' }, { id: 5, name: 'Cristiano' }] },
         ];
 
         const ops = new OperationsCompressor();
@@ -2033,7 +2033,7 @@ describe('OperationsCompressor class tests', () => {
         }
 
         expect(ops.setOperations).toEqual([
-            { operation: 'set', path: ['items'], value: [{id: 3, name: 'Pedro'}, {id: 5, name: 'Cristiano'}] }
+            { operation: 'set', path: ['items'], value: [{ id: 3, name: 'Pedro' }, { id: 5, name: 'Cristiano' }] }
         ]);
         expect(ops.spliceOperations).toEqual([]);
 
@@ -2053,7 +2053,7 @@ describe('OperationsCompressor class tests', () => {
         const initialObject = { items: [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }] };
 
         const operations: Operation[] = [
-            { operation: 'set', path: ['items'], value: [{ id: 3, name: 'Pedro' }, {id: 5, name: 'Cristiano'}] },
+            { operation: 'set', path: ['items'], value: [{ id: 3, name: 'Pedro' }, { id: 5, name: 'Cristiano' }] },
             { operation: 'set', path: ['items', 1, 'name'], value: 'Ronaldo' },
         ];
 
@@ -2064,7 +2064,7 @@ describe('OperationsCompressor class tests', () => {
         }
 
         expect(ops.setOperations).toEqual([
-            { operation: 'set', path: ['items'], value: [{id: 3, name: 'Pedro'}, {id: 5, name: 'Ronaldo'}] }
+            { operation: 'set', path: ['items'], value: [{ id: 3, name: 'Pedro' }, { id: 5, name: 'Ronaldo' }] }
         ]);
         expect(ops.spliceOperations).toEqual([]);
 
@@ -2081,7 +2081,7 @@ describe('OperationsCompressor class tests', () => {
     });
 
     it('Insert deeply nested item, delete at parent level and finally delete the inserted item', () => {
-        let initialObject = {items: [{p: [0, 1]}, {p: [0, 1]}, {p: [0, 1]}]};
+        let initialObject = { items: [{ p: [0, 1] }, { p: [0, 1] }, { p: [0, 1] }] };
         const operations: Operation[] = [
             { operation: 'insert', path: ['items', 2, 'p'], position: 0, items: [2] },
             { operation: 'delete', path: ['items'], position: 0, count: 1 },
@@ -2102,13 +2102,13 @@ describe('OperationsCompressor class tests', () => {
         expect(classResult).toEqual(originalResult);
     });
     it('Insert deeply nested item, perform operations on parent, and finally delete the inserted item', () => {
-        let initialObject = {items: [{p: [0, 1]}, {p: [0, 1]}, {p: [0, 1]}]};
+        let initialObject = { items: [{ p: [0, 1] }, { p: [0, 1] }, { p: [0, 1] }] };
         const operations: Operation[] = [
             { operation: 'insert', path: ['items', 2, 'p'], position: 0, items: [2] },
             { operation: 'delete', path: ['items'], position: 0, count: 1 },
             { operation: 'insert', path: ['items', 1, 'p'], position: 2, items: [3] },
-            { operation: 'insert', path: ['items'], position: 2, items: [{p: [0, 1]}] },
-            { operation: 'insert', path: ['items'], position: 1, items: [{p: [0, 1]}, {p: [0, 1]}] },
+            { operation: 'insert', path: ['items'], position: 2, items: [{ p: [0, 1] }] },
+            { operation: 'insert', path: ['items'], position: 1, items: [{ p: [0, 1] }, { p: [0, 1] }] },
             { operation: 'delete', path: ['items', 3, 'p'], position: 0, count: 1 },
         ];
 
@@ -2120,15 +2120,101 @@ describe('OperationsCompressor class tests', () => {
         expect(ops.spliceOperations).toEqual([
             { operation: 'delete', path: ['items'], position: 0, count: 1 },
             { operation: 'insert', path: ['items', 1, 'p'], position: 1, items: [3] },
-            { operation: 'insert', path: ['items'], position: 2, items: [{p: [0, 1]}] },
-            { operation: 'insert', path: ['items'], position: 1, items: [{p: [0, 1]}, {p: [0, 1]}] },
+            { operation: 'insert', path: ['items'], position: 2, items: [{ p: [0, 1] }] },
+            { operation: 'insert', path: ['items'], position: 1, items: [{ p: [0, 1] }, { p: [0, 1] }] },
         ]);
 
         const classResult = applier.applyOperations(initialObject, ops.spliceOperations);
         const originalResult = applier.applyOperations(initialObject, operations);
         expect(classResult).toEqual(originalResult);
     });
-    
+
+    it('Insert paths and points', () => {
+        let initialObject: { paths?: { points: number[][] }[] } = {};
+        const operations: Operation[] = [
+            { operation: 'set', path: ['paths'], value: [{ points: [[0]] }] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 1, items: [1] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 2, items: [2] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 3, items: [3] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 4, items: [4] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 5, items: [5] },
+            { operation: 'insert', path: ['paths'], position: 1, items: [{ points: [[0]] }] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 1, items: [1] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 2, items: [2] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 3, items: [3] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 4, items: [4] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 5, items: [5] },
+        ];
+
+        const applier = new OperationsApplierJson();
+        const ops = new OperationsCompressor();
+        for (const op of operations) {
+            ops.addOperation(op);
+        }
+        console.log(ops.spliceOperations);
+        console.log(ops.setOperations);
+        expect(ops.spliceOperations).toEqual([]);
+        expect(ops.setOperations).toEqual([
+            { operation: 'set', path: ['paths'], value: [{ points: [[0, 1, 2, 3, 4, 5]] }, { points: [[0, 1, 2, 3, 4, 5]] }] }
+        ]);
+    });
+
+    it('Insert paths and points without previous paths', () => {
+        let initialObject: { paths?: { points: number[][] }[] } = {};
+        const operations: Operation[] = [
+            { operation: 'set', path: ['paths'], value: [{ points: [[0]] }] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 1, items: [1] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 2, items: [2] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 3, items: [3] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 4, items: [4] },
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 5, items: [5] },
+            { operation: 'insert', path: ['paths'], position: 1, items: [{ points: [[0]] }] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 1, items: [1] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 2, items: [2] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 3, items: [3] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 4, items: [4] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 5, items: [5] },
+        ];
+
+        const applier = new OperationsApplierJson();
+        const ops = new OperationsCompressor();
+        for (const op of operations) {
+            ops.addOperation(op);
+        }
+        console.log(ops.spliceOperations);
+        console.log(ops.setOperations);
+        expect(ops.spliceOperations).toEqual([]);
+        expect(ops.setOperations).toEqual([
+            { operation: 'set', path: ['paths'], value: [{ points: [[0, 1, 2, 3, 4, 5]] }, { points: [[0, 1, 2, 3, 4, 5]] }] }
+        ]);
+    });
+
+    it('Insert paths and points with previous paths', () => {
+        let initialObject: { paths?: { points: number[][] }[] } = { paths: [{ points: [[0]] }] };
+        const operations: Operation[] = [
+            { operation: 'insert', path: ['paths', 0, 'points', 0], position: 5, items: [5] },
+            { operation: 'insert', path: ['paths'], position: 1, items: [{ points: [[0]] }] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 1, items: [1] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 2, items: [2] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 3, items: [3] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 4, items: [4] },
+            { operation: 'insert', path: ['paths', 1, 'points', 0], position: 5, items: [5] },
+        ];
+
+        const applier = new OperationsApplierJson();
+        const ops = new OperationsCompressor();
+        for (const op of operations) {
+            ops.addOperation(op);
+        }
+        console.log(ops.spliceOperations);
+        console.log(ops.setOperations);
+        expect(ops.spliceOperations).toEqual([]);
+        expect(ops.setOperations).toEqual([
+            { operation: 'set', path: ['paths'], value: [{ points: [[0, 1, 2, 3, 4, 5]] }, { points: [[0, 1, 2, 3, 4, 5]] }] }
+        ]);
+    });
+
+
 
 
 });

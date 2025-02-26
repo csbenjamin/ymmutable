@@ -111,7 +111,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                                 this._operations.next({ operation: 'delete', path, position: start, count: deleteCount });
                             }
                             if (items.length > 0) {
-                                this._operations.next({ operation: 'insert', path, position: start, items });
+                                this._operations.next({ operation: 'insert', path, position: start, items: this.deepClone(items) });
                             }
                             if (prop === 'pop' || prop === 'shift') {
                                 result = result[0];
