@@ -1,0 +1,1 @@
+export const YMMUTABLE_ID = Symbol();

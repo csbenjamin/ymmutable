@@ -1,6 +1,6 @@
 {
   "name": "@csbenjamin/ymmutable",
-  "version": "2.0.9",
+  "version": "2.0.10",
   "description": "Transform yjs in immutable objects",
   "main": "lib/index.js",
   "module": "lib/index.mjs",

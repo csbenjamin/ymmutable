@@ -1,6 +1,7 @@
 import { Subject } from 'rxjs';
 import { Operation, OperationsRecorderProxyType } from './types';
 import { AbstractType } from 'yjs';
+import { YMMUTABLE_ID } from './utils';
 
 export class OperationsRecorderProxy<T extends object> implements OperationsRecorderProxyType<T> {
     public proxy: T;
@@ -68,6 +69,9 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                 }
                 if (prop === '__target') {
                     return target;
+                }
+                if (prop === YMMUTABLE_ID) {
+                    return obj[YMMUTABLE_ID];
                 }
 
                 const value = obj[prop];

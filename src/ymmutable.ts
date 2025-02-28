@@ -2,7 +2,7 @@ import * as Y from 'yjs';
 import { merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import { debounce, debounceTime } from 'rxjs/operators';
 import { YMultiDocUndoManager } from 'y-utility/y-multidoc-undomanager';
-import { OperationsRecorderProxy, OperationsCompressor, OperationsApplierJson, OperationsApplierYjs, YDocType } from '.';
+import { OperationsRecorderProxy, OperationsCompressor, OperationsApplierJson, OperationsApplierYjs, YDocType, YMMUTABLE_ID } from '.';
 import { ID, DeepReadonly } from '@csbenjamin/common';
 
 interface YmmutableConstructorOptions {
@@ -66,9 +66,9 @@ export class Ymmutable<S extends Object> implements YDocType {
 
     // Initialize the immutable object by cloning the root map
     this.immutable = {} as DeepReadonly<S>;
-    Object.defineProperty(this.immutable, '_', { value: {}, enumerable: false, configurable: false, writable: false });
-    this.pathMap.set((this.immutable as any)._, { parent: null, key: null });
-    this.ymmutableMap.set((this.immutable as any)._, this);
+    Object.defineProperty(this.immutable, YMMUTABLE_ID, { value: Symbol(), enumerable: true, configurable: false, writable: false });
+    this.pathMap.set((this.immutable as any)[YMMUTABLE_ID], { parent: null, key: null });
+    this.ymmutableMap.set((this.immutable as any)[YMMUTABLE_ID], this);
 
     this.proxy = new OperationsRecorderProxy({} as any);
     const opCompressor = new OperationsCompressor();
@@ -128,11 +128,11 @@ export class Ymmutable<S extends Object> implements YDocType {
   protected clone(obj: any): any {
     if (obj instanceof Y.Array) {
       const arr: any = [];
-      Object.defineProperty(arr, '_', { value: {}, enumerable: false, configurable: false, writable: false });
+      Object.defineProperty(arr, YMMUTABLE_ID, { value: Symbol(), enumerable: true, configurable: false, writable: false });
       for (let i = 0; i < obj.length; i++) {
         const item = this.clone(obj.get(i));
-        if (typeof item === 'object' && item !== null && item._) {
-          this.pathMap.set(item._, { parent: arr._, key: i });
+        if (typeof item === 'object' && item !== null && item[YMMUTABLE_ID]) {
+          this.pathMap.set(item[YMMUTABLE_ID], { parent: arr[YMMUTABLE_ID], key: i });
         }
         arr.push(item);
       }
@@ -140,11 +140,11 @@ export class Ymmutable<S extends Object> implements YDocType {
       return arr;
     } else if (obj instanceof Y.Map) {
       const newObj: any = {};
-      Object.defineProperty(newObj, '_', { value: {}, enumerable: false, configurable: false, writable: false });
+      Object.defineProperty(newObj, YMMUTABLE_ID, { value: Symbol(), enumerable: true, configurable: false, writable: false });
       for (const [key, value] of obj.entries()) {
         newObj[key] = this.clone(value);
-        if (typeof newObj[key] === 'object' && newObj[key] !== null && newObj[key]._) {
-          this.pathMap.set(newObj[key]._, { parent: newObj._, key });
+        if (typeof newObj[key] === 'object' && newObj[key] !== null && newObj[key][YMMUTABLE_ID]) {
+          this.pathMap.set(newObj[key][YMMUTABLE_ID], { parent: newObj[YMMUTABLE_ID], key });
         }
       }
       return newObj;
@@ -159,11 +159,11 @@ export class Ymmutable<S extends Object> implements YDocType {
     }
     if (Array.isArray(obj)) {
       const arr: any = [];
-      Object.defineProperty(arr, '_', { value: (obj as any)._ || {}, enumerable: false, configurable: false, writable: false });
+      Object.defineProperty(arr, YMMUTABLE_ID, { value: (obj as any)[YMMUTABLE_ID] || Symbol(), enumerable: true, configurable: false, writable: false });
       for (let i = 0; i < obj.length; i++) {
         const item = this.clone(obj[i]);
-        if (typeof item === 'object' && item !== null && item._) {
-          this.pathMap.set(item._, { parent: arr._, key: i });
+        if (typeof item === 'object' && item !== null && item[YMMUTABLE_ID]) {
+          this.pathMap.set(item[YMMUTABLE_ID], { parent: arr[YMMUTABLE_ID], key: i });
         }
         arr.push(item);
       }
@@ -171,11 +171,11 @@ export class Ymmutable<S extends Object> implements YDocType {
     }
     if (typeof obj === 'object' && obj !== null && obj.constructor === Object) {
       const newObj: any = {};
-      Object.defineProperty(newObj, '_', { value: obj._ || {}, enumerable: false, configurable: false, writable: false });
+      Object.defineProperty(newObj, YMMUTABLE_ID, { value: (obj as any)[YMMUTABLE_ID] || Symbol(), enumerable: true, configurable: false, writable: false });
       for (const key of Object.keys(obj)) {
         newObj[key] = this.clone(obj[key]);
-        if (typeof newObj[key] === 'object' && newObj[key] !== null && newObj[key]._) {
-          this.pathMap.set(newObj[key]._, { parent: newObj._, key });
+        if (typeof newObj[key] === 'object' && newObj[key] !== null && newObj[key][YMMUTABLE_ID]) {
+          this.pathMap.set(newObj[key][YMMUTABLE_ID], { parent: newObj[YMMUTABLE_ID], key });
         }
       }
       return newObj;
@@ -187,6 +187,10 @@ export class Ymmutable<S extends Object> implements YDocType {
     this.flushSubject.next();
   }
 
+  private arrayCopy<T = any>(arr: T[]): T[] {
+    return Object.defineProperties([...arr], { [YMMUTABLE_ID]: { value: (arr as any)[YMMUTABLE_ID], enumerable: true, configurable: false, writable: false } });
+  }
+
   // Method to create a handler for observeDeep
   private createHandle() {
     return (events: Y.YEvent<any>[], transaction: Y.Transaction) => {
@@ -194,7 +198,6 @@ export class Ymmutable<S extends Object> implements YDocType {
         return;
       }
       const newValue = { ...(this.immutable as any) };
-      Object.defineProperty(newValue, '_', { value: (this.immutable as any)._, enumerable: false, configurable: false, writable: false });
       let hasImmutableChanges = false;
       for (const event of events) {
         if (!(event instanceof Y.YArrayEvent || event instanceof Y.YMapEvent)) {
@@ -204,13 +207,9 @@ export class Ymmutable<S extends Object> implements YDocType {
         let v: any = newValue;
         for (const p of event.path) {
           if (Array.isArray(v[p])) {
-            const id = (v[p] as any)._;
-            v[p] = [...v[p]];
-            Object.defineProperty(v[p], '_', { value: id, enumerable: false, configurable: false, writable: false });
+            v[p] = this.arrayCopy(v[p]);
           } else if (typeof v[p] === 'object' && v[p] !== null && !(v[p] instanceof Uint8Array) && !(v[p] instanceof ID)) {
-            const id = (v[p] as any)._;
             v[p] = { ...v[p] };
-            Object.defineProperty(v[p], '_', { value: id, enumerable: false, configurable: false, writable: false });
           }
           v = v[p];
         }
@@ -223,13 +222,13 @@ export class Ymmutable<S extends Object> implements YDocType {
             if (d.delete) {
               const result = v.splice(index, d.delete);
               for (const obj of result) {
-                if (typeof obj === 'object' && obj !== null && obj._) {
-                  this.pathMap.delete(obj._);
+                if (typeof obj === 'object' && obj !== null && obj[YMMUTABLE_ID]) {
+                  this.pathMap.delete(obj[YMMUTABLE_ID]);
                 }
               }
               for (let i = index; i < v.length; i++) {
-                if (typeof v[i] === 'object' && v[i] !== null && v[i]._) {
-                  this.pathMap.set(v[i]._, { parent: v._, key: i });
+                if (typeof v[i] === 'object' && v[i] !== null && v[i][YMMUTABLE_ID]) {
+                  this.pathMap.set(v[i][YMMUTABLE_ID], { parent: v[YMMUTABLE_ID], key: i });
                 }
               }
             }
@@ -237,8 +236,8 @@ export class Ymmutable<S extends Object> implements YDocType {
               const content = this.clone(d.insert) as any[];
               v.splice(index, 0, ...content);
               for (let i = index; i < v.length; i++) {
-                if (typeof v[i] === 'object' && v[i] !== null && v[i]._) {
-                  this.pathMap.set(v[i]._, { parent: v._, key: i });
+                if (typeof v[i] === 'object' && v[i] !== null && v[i][YMMUTABLE_ID]) {
+                  this.pathMap.set(v[i][YMMUTABLE_ID], { parent: v[YMMUTABLE_ID], key: i });
                 }
               }
               index += content.length;
@@ -247,14 +246,14 @@ export class Ymmutable<S extends Object> implements YDocType {
         } else if (event instanceof Y.YMapEvent) {
           for (const [key2, value] of event.keys) {
             if (value.action === 'delete') {
-              if (typeof v[key2] === 'object' && v[key2] !== null && v[key2]._) {
-                this.pathMap.delete(v[key2]._);
+              if (typeof v[key2] === 'object' && v[key2] !== null && v[key2][YMMUTABLE_ID]) {
+                this.pathMap.delete(v[key2][YMMUTABLE_ID]);
               }
               delete v[key2];
             } else {
               v[key2] = this.clone(event.target.get(key2));
-              if (typeof v[key2] === 'object' && v[key2] !== null && v[key2]._) {
-                this.pathMap.set(v[key2]._, { parent: v._, key: key2 });
+              if (typeof v[key2] === 'object' && v[key2] !== null && v[key2][YMMUTABLE_ID]) {
+                this.pathMap.set(v[key2][YMMUTABLE_ID], { parent: v[YMMUTABLE_ID], key: key2 });
               }
             }
           }
