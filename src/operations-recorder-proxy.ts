@@ -13,17 +13,17 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
 
     constructor(initialObject: T) {
         // Faz uma cópia profunda para evitar mutações no objeto original
-        this.initialObject = this.deepClone(initialObject);
+        this.initialObject = this.deepClone(initialObject, true);
         this.proxyCache = new WeakMap();
         this.proxy = this.createProxy([], this.initialObject);
     }
 
     setObject(obj: T) {
-        this.initialObject = this.deepClone(obj);
+        this.initialObject = this.deepClone(obj, true);
         this.proxy = this.createProxy([], this.initialObject);
     }
 
-    private deepClone(obj: any): any {
+    private deepClone(obj: any, preserveId: boolean): any {
         if (obj === null || typeof obj !== 'object') {
             return obj;
         }
@@ -31,10 +31,11 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
             return new Uint8Array(obj);
         }
         if (obj.__isProxy) {
-            return this.deepClone(obj.__target);
+            return this.deepClone(obj.__target, preserveId);
         }
         if (Array.isArray(obj)) {
-            return obj.map(item => this.deepClone(item));
+            const id = (preserveId && (obj as any)[YMMUTABLE_ID]) || Symbol();
+            return Object.defineProperty(obj.map(item => this.deepClone(item, preserveId)), YMMUTABLE_ID, { value: id, enumerable: false, configurable: false, writable: false });
         }
         if (obj instanceof AbstractType) {
             this.abstractTypeFound = true;
@@ -46,10 +47,11 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
         const clonedObj: any = {};
         for (const key in obj) {
             if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                clonedObj[key] = this.deepClone(obj[key]);
+                clonedObj[key] = this.deepClone(obj[key], preserveId);
             }
         }
-        return clonedObj;
+        const id = (preserveId && (obj as any)[YMMUTABLE_ID]) || Symbol();
+        return Object.defineProperty(clonedObj, YMMUTABLE_ID, { value: id, enumerable: false, configurable: false, writable: false });;
     }
 
     private createProxy(path: Array<string | number>, target: any): any {
@@ -106,7 +108,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                                 spliceArgs = [0, 0, ...args];
                             }
                             for (let i = 2; i < spliceArgs.length; i++) {
-                                spliceArgs[i] = this.deepClone(spliceArgs[i]);
+                                spliceArgs[i] = this.deepClone(spliceArgs[i], false);
                             }
 
                             let result: any = obj.splice.apply(obj, spliceArgs as any);
@@ -115,7 +117,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                                 this._operations.next({ operation: 'delete', path, position: start, count: deleteCount });
                             }
                             if (items.length > 0) {
-                                this._operations.next({ operation: 'insert', path, position: start, items: this.deepClone(items) });
+                                this._operations.next({ operation: 'insert', path, position: start, items: this.deepClone(items, true) });
                             }
                             if (prop === 'pop' || prop === 'shift') {
                                 result = result[0];
@@ -133,7 +135,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                 if (obj[prop] === value) {
                     return true;
                 }
-                value = this.deepClone(value);
+                value = this.deepClone(value, false);
 
                 if (prop === 'length' && Array.isArray(obj)) {
                     if (value < obj.length) {
@@ -151,7 +153,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                 }
                 obj[propKey] = value;
                 const newPath = path.concat(propKey as string | number);
-                this._operations.next({ operation: 'set', path: newPath, value: this.deepClone(value) });
+                this._operations.next({ operation: 'set', path: newPath, value: this.deepClone(value, true) });
                 return true;
             },
             deleteProperty: (obj, prop) => {
