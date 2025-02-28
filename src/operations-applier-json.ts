@@ -17,15 +17,12 @@ export class OperationsApplierJson implements OperationsApplier {
     }
 
     private arrayCopy<T = any>(arr: T[]): T[] {
-        return Object.defineProperties([...arr], { [YMMUTABLE_ID]: { value: (arr as any)[YMMUTABLE_ID] || Symbol(), enumerable: true, configurable: false, writable: false } });
+        return Object.defineProperty([...arr], YMMUTABLE_ID, { value: (arr as any)[YMMUTABLE_ID] || Symbol(), enumerable: false, configurable: false, writable: false });
     }
     private objCopy<T = any>(obj: T): T {
-        obj = { ...obj };
-        if (!(obj as any)[YMMUTABLE_ID]) {
-            Object.defineProperty(obj, YMMUTABLE_ID, { value: Symbol(), enumerable: true, configurable: false, writable: false });
-        }
-        return obj;
+        return Object.defineProperty({ ...obj }, YMMUTABLE_ID, { value: (obj as any)[YMMUTABLE_ID] || Symbol(), enumerable: false, configurable: false, writable: false });
     }
+
 
     private applyOperation(obj: any, op: Operation): any {
         if (op.operation === 'set') {

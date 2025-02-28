@@ -1,4 +1,4 @@
-import { Ymmutable } from '..'; // Ajuste o caminho conforme necessário
+import { Ymmutable, YMMUTABLE_ID } from '..'; // Ajuste o caminho conforme necessário
 import { YMultiDocUndoManager } from 'y-utility/y-multidoc-undomanager';
 import * as Y from 'yjs';
 import { jest } from '@jest/globals';
@@ -6,11 +6,12 @@ import { jest } from '@jest/globals';
 jest.useFakeTimers();
 
 interface TestData {
+    [YMMUTABLE_ID]?: Symbol;
     foo?: string;
     bar?: number;
     nested?: {
         baz?: boolean;
-        [key: string]: any; // Permite outras propriedades
+        [key: string | symbol]: any; // Permite outras propriedades
     };
     list?: any[];
     buffer?: Uint8Array;
@@ -18,7 +19,7 @@ interface TestData {
     b?: number;
     c?: number;
     yText?: Y.Text;
-    [key: string]: any; // Permite outras propriedades
+    [key: string | symbol]: any; // Permite outras propriedades
 }
 
 describe('Ymmutable', () => {
@@ -711,14 +712,14 @@ describe('Ymmutable', () => {
         ]);
 
     });
-    it('should preserve the id _', () => {
+    it('should preserve the id YMMUTABLE_ID', () => {
         let oldValue = ymmutable.immutable;
         ymmutable.mutate(d => {
             d.nested = { bar: 42 };
         });
 
         expect(oldValue).not.toBe(ymmutable.immutable);
-        expect(oldValue._).toBe(ymmutable.immutable._);
+        expect(oldValue[YMMUTABLE_ID]).toBe(ymmutable.immutable[YMMUTABLE_ID]);
 
         oldValue = ymmutable.immutable;
 
@@ -728,11 +729,11 @@ describe('Ymmutable', () => {
 
         expect(ymmutable.immutable.nested?.bar).toBe(44);
         expect(ymmutable.immutable.nested).not.toBe(oldValue.nested);
-        expect(ymmutable.immutable.nested?._).toBe(oldValue.nested?._);
-        expect(ymmutable.immutable.nested?._).toBeDefined();
-        let valueInMap = pathMap.get(ymmutable.immutable.nested?._);
+        expect(ymmutable.immutable.nested![YMMUTABLE_ID]).toBe(oldValue.nested![YMMUTABLE_ID]);
+        expect(ymmutable.immutable.nested![YMMUTABLE_ID]).toBeDefined();
+        let valueInMap = pathMap.get(ymmutable.immutable.nested![YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe(ymmutable.immutable._);
+        expect(valueInMap?.parent).toBe(ymmutable.immutable[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe('nested');
 
         oldValue = ymmutable.immutable;
@@ -743,25 +744,25 @@ describe('Ymmutable', () => {
 
         expect(ymmutable.immutable.list).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
         expect(ymmutable.immutable.list).not.toBe(oldValue.list);
-        expect((ymmutable.immutable.list as any)?._).toBeDefined();
+        expect((ymmutable.immutable.list as any)![YMMUTABLE_ID]).toBeDefined();
 
         const list = ymmutable.immutable.list as { id: string, _: any }[] & { _: any };
-        expect(list[0]._).toBeDefined();
-        expect(list[1]._).toBeDefined();
-        expect(list[2]._).toBeDefined();
-        valueInMap = pathMap.get(list[0]._);
+        expect((list[0] as any)[YMMUTABLE_ID]).toBeDefined();
+        expect((list[1] as any)[YMMUTABLE_ID]).toBeDefined();
+        expect((list[2] as any)[YMMUTABLE_ID]).toBeDefined();
+        valueInMap = pathMap.get((list[0] as any)[YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe(list._);
+        expect(valueInMap?.parent).toBe((list as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(0);
 
-        valueInMap = pathMap.get(list[1]._);
+        valueInMap = pathMap.get((list[1] as any)[YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe(list._);
+        expect(valueInMap?.parent).toBe((list as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(1);
 
-        valueInMap = pathMap.get(list[2]._);
+        valueInMap = pathMap.get((list[2] as any)[YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe(list._);
+        expect(valueInMap?.parent).toBe((list as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(2);
 
         oldValue = ymmutable.immutable;
@@ -774,35 +775,35 @@ describe('Ymmutable', () => {
         const updatedList = ymmutable.immutable.list!;
         expect(updatedList).toEqual([{ id: 1 }, { id: 4 }, { id: 2 }, { id: 3 }]);
         expect(updatedList.length).toBe(4);
-        expect(updatedList[1]._).toBeDefined();
+        expect(updatedList[1][YMMUTABLE_ID]).toBeDefined();
 
 
 
-        expect(updatedList[0]._).toBe(list[0]._);
-        expect(updatedList[2]._).toBe(list[1]._);
-        expect(updatedList[3]._).toBe(list[2]._);
+        expect(updatedList[0][YMMUTABLE_ID]).toBe((list[0] as any)[YMMUTABLE_ID]);
+        expect(updatedList[2][YMMUTABLE_ID]).toBe((list[1] as any)[YMMUTABLE_ID]);
+        expect(updatedList[3][YMMUTABLE_ID]).toBe((list[2] as any)[YMMUTABLE_ID]);
 
 
-        valueInMap = pathMap.get(updatedList[0]._);
+        valueInMap = pathMap.get(updatedList[0][YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe((updatedList as any)._);
+        expect(valueInMap?.parent).toBe((updatedList as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(0);
-        valueInMap = pathMap.get(updatedList[1]._);
+        valueInMap = pathMap.get(updatedList[1][YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe((updatedList as any)._);
+        expect(valueInMap?.parent).toBe((updatedList as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(1);
-        valueInMap = pathMap.get(updatedList[2]._);
+        valueInMap = pathMap.get(updatedList[2][YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe((updatedList as any)._);
+        expect(valueInMap?.parent).toBe((updatedList as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(2);
-        valueInMap = pathMap.get(updatedList[3]._);
+        valueInMap = pathMap.get(updatedList[3][YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe((updatedList as any)._);
+        expect(valueInMap?.parent).toBe((updatedList as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(3);
 
-        valueInMap = pathMap.get((updatedList as any)._);
+        valueInMap = pathMap.get((updatedList as any)[YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe(oldValue._);
+        expect(valueInMap?.parent).toBe(oldValue[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe('list');
 
         oldValue = ymmutable.immutable;
@@ -814,26 +815,26 @@ describe('Ymmutable', () => {
         const updatedList2 = ymmutable.immutable.list!;
         expect(updatedList2).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
         expect(updatedList2.length).toBe(3);
-        expect(updatedList2[0]._).toBeDefined();
-        expect(updatedList2[1]._).toBeDefined();
-        expect(updatedList2[2]._).toBeDefined();
+        expect(updatedList2[0][YMMUTABLE_ID]).toBeDefined();
+        expect(updatedList2[1][YMMUTABLE_ID]).toBeDefined();
+        expect(updatedList2[2][YMMUTABLE_ID]).toBeDefined();
 
-        valueInMap = pathMap.get(updatedList2[0]._);
+        valueInMap = pathMap.get(updatedList2[0][YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe((updatedList2 as any)._);
+        expect(valueInMap?.parent).toBe((updatedList2 as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(0);
 
-        valueInMap = pathMap.get(updatedList2[1]._);
+        valueInMap = pathMap.get(updatedList2[1][YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe((updatedList2 as any)._);
+        expect(valueInMap?.parent).toBe((updatedList2 as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(1);
 
-        valueInMap = pathMap.get(updatedList2[2]._);
+        valueInMap = pathMap.get(updatedList2[2][YMMUTABLE_ID]);
         expect(valueInMap).toBeDefined();
-        expect(valueInMap?.parent).toBe((updatedList2 as any)._);
+        expect(valueInMap?.parent).toBe((updatedList2 as any)[YMMUTABLE_ID]);
         expect(valueInMap?.key).toBe(2);
 
-        valueInMap = pathMap.get(updatedList[1]._);
+        valueInMap = pathMap.get(updatedList[1][YMMUTABLE_ID]);
         expect(valueInMap).not.toBeDefined();
     });
 });
