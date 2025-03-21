@@ -18,7 +18,7 @@ describe('OperationsRecorderProxy', () => {
     });
 
     it('should deep clone an object', () => {
-        const cloned = objectProxy['deepClone'](initialObject);
+        const cloned = objectProxy['deepClone'](initialObject, false);
         expect(cloned).toEqual(initialObject);
         expect(cloned).not.toBe(initialObject);
         expect(cloned.b).not.toBe(initialObject.b);
@@ -317,4 +317,18 @@ describe('OperationsRecorderProxy', () => {
         value.name = 'third';
         expect(operations).toEqual([{ operation: 'set', path: ['items', 1, 'name'], value: 'third' }]);
     });
+    it(`por conta de um bug, o path utilizado estava sendo ['items', 0, 'name'] na terceira operação quando devia ser ['items', 1, 'name'] devido ao unshift`, () => {
+        const obj = { items: [{ name: 'first' }, { name: 'second' }] };
+        const proxy = new OperationsRecorderProxy(obj);
+        const operations: Operation[] = [];
+        proxy.operations.subscribe(op => operations.push(op));
+        proxy.proxy.items[0].name = 'third';
+        proxy.proxy.items.unshift({ name: 'fourth' });
+        proxy.proxy.items[1].name = 'fifth';
+        expect(operations).toEqual([
+            { operation: 'set', path: ['items', 0, 'name'], value: 'third' },
+            { operation: 'insert', path: ['items'], position: 0, items: [{ name: 'fourth' }] },
+            { operation: 'set', path: ['items', 1, 'name'], value: 'fifth' } // por conta de um bug, o path utilizado estava sendo ['items', 0, 'name']
+        ]);
+    })
 });
