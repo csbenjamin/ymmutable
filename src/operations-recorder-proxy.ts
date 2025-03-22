@@ -75,21 +75,19 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
         const arrayPath = path.join('.');
         const affectedEntries = Array.from(this.idToPathMap.entries())
             .filter(([_, p]) => p.join('.').startsWith(arrayPath) && p.length > path.length)
-            .map(([id, p]) => ({ id, index: Number(p[path.length]) }));
+            .map(([id, p]) => ({ id, index: Number(p[path.length]), path: p }));
 
-        affectedEntries.forEach(({ id, index }) => {
+        affectedEntries.forEach(({ id, index, path: oldPath }) => {
             if (index >= start + deleteCount) {
                 // Elementos deslocados após a inserção/remoção
                 const newIndex = index - deleteCount + insertedItems.length;
-                const newPath = [...path, newIndex, ...this.idToPathMap.get(id)!.slice(path.length + 1)];
+                const newPath = [...path, newIndex, ...oldPath.slice(path.length + 1)];
                 this.idToPathMap.set(id, newPath);
             } else if (index >= start && index < start + deleteCount) {
                 // Elementos removidos
                 this.idToPathMap.delete(id);
             }
         });
-
-        // Adiciona paths para os itens inseridos apenas se já foram acessados (ignoramos aqui pois proxies são lazy)
     }
 
     private createProxy(path: Array<string | number>, target: any): any {
@@ -157,13 +155,19 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
 
                             const result = obj.splice.apply(obj, spliceArgs as any);
                             const [start, deleteCount = 0, ...items] = spliceArgs;
+                            // Usa o path atualizado do mapa, se disponível
+                            const id = (obj as any)[YMMUTABLE_ID];
+                            let newPath: Array<string | number> = path;
+                            if (id && this.idToPathMap.has(id)) {
+                                newPath = this.idToPathMap.get(id)!;
+                            }
                             if (deleteCount > 0) {
-                                this._operations.next({ operation: 'delete', path, position: start, count: deleteCount });
+                                this._operations.next({ operation: 'delete', path: newPath, position: start, count: deleteCount });
                             }
                             if (items.length > 0) {
                                 this._operations.next({
                                     operation: 'insert',
-                                    path,
+                                    path: newPath,
                                     position: start,
                                     items: this.deepClone(items, true)
                                 });
@@ -185,9 +189,15 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
 
                 if (prop === 'length' && Array.isArray(obj)) {
                     if (value < obj.length) {
+                        // Usa o path atualizado do mapa, se disponível
+                        const id = (obj as any)[YMMUTABLE_ID];
+                        let newPath: Array<string | number> = path;
+                        if (id && this.idToPathMap.has(id)) {
+                            newPath = this.idToPathMap.get(id)!;
+                        }
                         this._operations.next({
                             operation: 'delete',
-                            path,
+                            path: newPath,
                             position: value,
                             count: obj.length - value
                         });

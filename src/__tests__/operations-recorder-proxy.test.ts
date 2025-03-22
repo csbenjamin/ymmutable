@@ -331,4 +331,21 @@ describe('OperationsRecorderProxy', () => {
             { operation: 'set', path: ['items', 1, 'name'], value: 'fifth' } // por conta de um bug, o path utilizado estava sendo ['items', 0, 'name']
         ]);
     })
+    it(`remove sequencialmente`, () => {
+        const obj = { items: [{ data: [1, 2] }] };
+        const proxy = new OperationsRecorderProxy(obj);
+        const operations: Operation[] = [];
+        proxy.operations.subscribe(op => operations.push(op));
+        proxy.proxy.items.push({ data: [3, 4] });
+        proxy.proxy.items[1].data.splice(0, 1);
+        proxy.proxy.items.splice(0, 1);
+        proxy.proxy.items[0].data.splice(0, 1);
+
+        expect(operations).toEqual([
+            { operation: 'insert', path: ['items'], position: 1, items: [{ data: [3, 4] }] },
+            { operation: 'delete', path: ['items', 1, 'data'], position: 0, count: 1 },
+            { operation: 'delete', path: ['items'], position: 0, count: 1 },
+            { operation: 'delete', path: ['items', 0, 'data'], position: 0, count: 1 }
+        ]);
+    })
 });
