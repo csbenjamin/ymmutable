@@ -123,9 +123,16 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                     Array.isArray(value) ||
                     (typeof value === 'object' && value !== null && value.constructor === Object)
                 ) {
-                    const propKey = Array.isArray(obj) && !isNaN(Number(prop)) ? Number(prop) : prop;
-                    const newPath = path.concat(propKey as string | number);
-                    return this.createProxy(newPath, value);
+                    if (Array.isArray(value) || typeof value === "object" && value !== null && value.constructor === Object) {
+                        // --- Tenta obter o caminho ATUALIZADO do PAI ---
+                        const parentId = obj[YMMUTABLE_ID];
+                        // Usa o caminho do mapa se confiável, senão usa o 'path' capturado (que pode estar obsoleto)
+                        const currentParentPath = (parentId && this.idToPathMap.get(parentId)) || path;
+                        // ---------------------------------------------
+                        const propKey = Array.isArray(obj) && !isNaN(Number(prop)) ? Number(prop) : prop;
+                        const newPath = currentParentPath.concat(propKey as string | number);
+                        return this.createProxy(newPath, value);
+                    }
                 }
 
                 if (typeof value === 'function' && Array.isArray(obj)) {
@@ -169,6 +176,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                                     operation: 'insert',
                                     path: newPath,
                                     position: start,
+                                    // temos que fazer um novo clone, para que novas operações aqui no proxy não altere 
                                     items: this.deepClone(items, true)
                                 });
                             }
