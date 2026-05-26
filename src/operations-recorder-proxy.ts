@@ -10,7 +10,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
     public operations = this._operations.asObservable();
     private proxyCache: WeakMap<object, any>;
     public abstractTypeFound = false;
-    private idToPathMap: Map<symbol, Array<string | number>> = new Map(); // Mapa de IDs para paths, preenchido sob demanda
+    private idToPathMap: Map<object, Array<string | number>> = new Map(); // Mapa de IDs para paths, preenchido sob demanda
 
     constructor(initialObject: T) {
         // Faz uma cópia profunda para evitar mutações no objeto original
@@ -36,7 +36,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
             return this.deepClone(obj.__target, preserveId);
         }
         if (Array.isArray(obj)) {
-            const id = (preserveId && (obj as any)[YMMUTABLE_ID]) || Symbol();
+            const id = (preserveId && (obj as any)[YMMUTABLE_ID]) || {};
             return Object.defineProperty(
                 obj.map(item => this.deepClone(item, preserveId)),
                 YMMUTABLE_ID,
@@ -56,7 +56,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                 clonedObj[key] = this.deepClone(obj[key], preserveId);
             }
         }
-        const id = (preserveId && (obj as any)[YMMUTABLE_ID]) || Symbol();
+        const id = (preserveId && (obj as any)[YMMUTABLE_ID]) || {};
         return Object.defineProperty(clonedObj, YMMUTABLE_ID, {
             value: id,
             enumerable: false,
