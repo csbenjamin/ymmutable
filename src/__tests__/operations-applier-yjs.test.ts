@@ -141,6 +141,36 @@ describe('OperationsApplierYjs', () => {
             expect(nested.get('count')).toBe(10);
         });
 
+        it('deve limitar insert fora do range ao final do array', () => {
+            const operations: Operation[] = [
+                { operation: 'set', path: ['myArray'], value: ['x'] },
+                { operation: 'insert', path: ['myArray'], position: 5, items: ['y'] },
+            ];
+
+            expect(() => applier.applyOperations(map, operations)).not.toThrow();
+            expect((map.get('myArray') as Y.Array<any>).toArray()).toEqual(['x', 'y']);
+        });
+
+        it('deve normalizar posições negativas em delete', () => {
+            const operations: Operation[] = [
+                { operation: 'set', path: ['myArray'], value: ['x', 'y'] },
+                { operation: 'delete', path: ['myArray'], position: -1, count: 1 },
+            ];
+
+            expect(() => applier.applyOperations(map, operations)).not.toThrow();
+            expect((map.get('myArray') as Y.Array<any>).toArray()).toEqual(['x']);
+        });
+
+        it('deve ignorar deletes fora do range', () => {
+            const operations: Operation[] = [
+                { operation: 'set', path: ['myArray'], value: ['x'] },
+                { operation: 'delete', path: ['myArray'], position: 10, count: 1 },
+            ];
+
+            expect(() => applier.applyOperations(map, operations)).not.toThrow();
+            expect((map.get('myArray') as Y.Array<any>).toArray()).toEqual(['x']);
+        });
+
         it('deve lidar com objetos complexos e arrays', () => {
             const complexValue = {
                 number: 123,

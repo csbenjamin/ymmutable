@@ -90,6 +90,72 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
         });
     }
 
+    private toIntegerOrInfinity(value: any): number {
+        const numberValue = Number(value);
+        if (Number.isNaN(numberValue) || numberValue === 0) {
+            return 0;
+        }
+        if (!Number.isFinite(numberValue)) {
+            return numberValue;
+        }
+        return numberValue < 0 ? Math.ceil(numberValue) : Math.floor(numberValue);
+    }
+
+    private normalizeSpliceArgs(length: number, args: any[]): { start: number; deleteCount: number; items: any[] } {
+        const relativeStart = args.length > 0 ? this.toIntegerOrInfinity(args[0]) : 0;
+        const start = relativeStart === -Infinity
+            ? 0
+            : relativeStart < 0
+                ? Math.max(length + relativeStart, 0)
+                : Math.min(relativeStart, length);
+
+        let deleteCount: number;
+        if (args.length === 0) {
+            deleteCount = 0;
+        } else if (args.length === 1) {
+            deleteCount = length - start;
+        } else {
+            deleteCount = Math.min(Math.max(this.toIntegerOrInfinity(args[1]), 0), length - start);
+        }
+
+        return {
+            start,
+            deleteCount,
+            items: args.slice(2),
+        };
+    }
+
+    private getCurrentPath(obj: any, fallbackPath: Array<string | number>): Array<string | number> {
+        const id = obj[YMMUTABLE_ID];
+        if (id && this.idToPathMap.has(id)) {
+            return this.idToPathMap.get(id)!;
+        }
+        return fallbackPath;
+    }
+
+    private applyArraySplice(obj: any[], path: Array<string | number>, args: any[]) {
+        const { start, deleteCount, items: rawItems } = this.normalizeSpliceArgs(obj.length, args);
+        const items = rawItems.map(item => this.deepClone(item, false));
+        const result = obj.splice(start, deleteCount, ...items);
+        const currentPath = this.getCurrentPath(obj, path);
+
+        if (deleteCount > 0) {
+            this._operations.next({ operation: 'delete', path: currentPath, position: start, count: deleteCount });
+        }
+        if (items.length > 0) {
+            this._operations.next({
+                operation: 'insert',
+                path: currentPath,
+                position: start,
+                // temos que fazer um novo clone, para que novas operações aqui no proxy não altere
+                items: this.deepClone(items, true)
+            });
+        }
+        this.updateIdToPathMapAfterSplice(currentPath, start, deleteCount, items);
+
+        return result;
+    }
+
     private createProxy(path: Array<string | number>, target: any): any {
         if (typeof target !== 'object' || target === null) {
             return target;
@@ -156,32 +222,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                                 // transform the unshift operation into a splice operation
                                 spliceArgs = [0, 0, ...args];
                             }
-                            for (let i = 2; i < spliceArgs.length; i++) {
-                                spliceArgs[i] = this.deepClone(spliceArgs[i], false);
-                            }
-
-                            const result = obj.splice.apply(obj, spliceArgs as any);
-                            const [start, deleteCount = 0, ...items] = spliceArgs;
-                            // Usa o path atualizado do mapa, se disponível
-                            const id = (obj as any)[YMMUTABLE_ID];
-                            let newPath: Array<string | number> = path;
-                            if (id && this.idToPathMap.has(id)) {
-                                newPath = this.idToPathMap.get(id)!;
-                            }
-                            if (deleteCount > 0) {
-                                this._operations.next({ operation: 'delete', path: newPath, position: start, count: deleteCount });
-                            }
-                            if (items.length > 0) {
-                                this._operations.next({
-                                    operation: 'insert',
-                                    path: newPath,
-                                    position: start,
-                                    // temos que fazer um novo clone, para que novas operações aqui no proxy não altere 
-                                    items: this.deepClone(items, true)
-                                });
-                            }
-                            // Atualiza o mapa apenas para proxies já criados
-                            this.updateIdToPathMapAfterSplice(path, start, deleteCount, items);
+                            const result = this.applyArraySplice(obj, path, spliceArgs);
 
                             if (prop === 'pop' || prop === 'shift') return result[0];
                             if (prop === 'push' || prop === 'unshift') return obj.length;
@@ -197,18 +238,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
 
                 if (prop === 'length' && Array.isArray(obj)) {
                     if (value < obj.length) {
-                        // Usa o path atualizado do mapa, se disponível
-                        const id = (obj as any)[YMMUTABLE_ID];
-                        let newPath: Array<string | number> = path;
-                        if (id && this.idToPathMap.has(id)) {
-                            newPath = this.idToPathMap.get(id)!;
-                        }
-                        this._operations.next({
-                            operation: 'delete',
-                            path: newPath,
-                            position: value,
-                            count: obj.length - value
-                        });
+                        this.applyArraySplice(obj, path, [value, obj.length - value]);
                         return true;
                     }
                     throw new Error('Should not use length property to increase the array size');

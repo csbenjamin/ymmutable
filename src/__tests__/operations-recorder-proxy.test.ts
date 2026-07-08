@@ -118,6 +118,24 @@ describe('OperationsRecorderProxy', () => {
         ]);
     });
 
+    it('should normalize splice positions beyond the array length', () => {
+        objectProxy.proxy.d.splice(10, 0, 5);
+        expect(objectProxy.proxy.d).toEqual([3, 4, 5]);
+        expect(operations).toEqual([{ operation: 'insert', path: ['d'], position: 2, items: [5] }]);
+    });
+
+    it('should normalize negative splice positions', () => {
+        objectProxy.proxy.d.splice(-1, 1);
+        expect(objectProxy.proxy.d).toEqual([3]);
+        expect(operations).toEqual([{ operation: 'delete', path: ['d'], position: 1, count: 1 }]);
+    });
+
+    it('should delete to the end when splice deleteCount is omitted', () => {
+        objectProxy.proxy.g.splice(1);
+        expect(objectProxy.proxy.g).toEqual([{ id: 1 }]);
+        expect(operations).toEqual([{ operation: 'delete', path: ['g'], position: 1, count: 4 }]);
+    });
+
     it('should track setting an array and then pushing an element', () => {
         objectProxy.proxy.d = [1, 2, 3, 4, 5];
         objectProxy.proxy.d.push(6);

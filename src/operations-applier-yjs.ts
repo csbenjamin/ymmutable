@@ -23,13 +23,15 @@ export class OperationsApplierYjs implements OperationsApplier {
         if (operation === 'set') {
             const value = op.value;
             this.setYjsValue(target, key, value);
-        } else {
+        } else if (operation === 'insert' || operation === 'delete') {
             target = this.getOrCreateYjsChild(target, key, true);
             if (target instanceof Y.Array) {
                 this.applySpliceMethod(target, op);
             } else {
                 throw new Error(`O alvo não é um Y.Array`);
             }
+        } else {
+            throw new Error(`Tipo de operação desconhecido: ${operation}`);
         }
     }
 
@@ -66,11 +68,26 @@ export class OperationsApplierYjs implements OperationsApplier {
         }
     }
 
+    private normalizeArrayIndex(index: number, length: number): number {
+        if (!Number.isFinite(index)) {
+            return index < 0 ? 0 : length;
+        }
+        const integerIndex = index < 0 ? Math.ceil(index) : Math.floor(index);
+        return integerIndex < 0 ? Math.max(length + integerIndex, 0) : Math.min(integerIndex, length);
+    }
+
+    private normalizeDeleteCount(count: number, length: number, start: number): number {
+        if (!Number.isFinite(count)) {
+            return count < 0 ? 0 : length - start;
+        }
+        return Math.min(Math.max(count < 0 ? Math.ceil(count) : Math.floor(count), 0), length - start);
+    }
+
     private setYjsValue(target: yTypes, key: string | number, value: any): void {
         if (target instanceof Y.Map && typeof key === 'string') {
             target.set(key as string, this.convertValueToYjsFormat(value));
         } else if (target instanceof Y.Array && typeof key === 'number') {
-            const index = key as number;
+            const index = this.normalizeArrayIndex(key, target.length);
             if (target.length > index) {
                 target.delete(index, 1);
             }
@@ -81,10 +98,18 @@ export class OperationsApplierYjs implements OperationsApplier {
     }
 
     private applySpliceMethod(target: Y.Array<any>, op: spliceOperation): void {
+        const position = this.normalizeArrayIndex(op.position, target.length);
         if (op.operation === 'insert') {
-            target.insert(op.position, op.items.map((v: any) => this.convertValueToYjsFormat(v)));
+            if (op.items.length === 0) {
+                return;
+            }
+            target.insert(position, op.items.map((v: any) => this.convertValueToYjsFormat(v)));
         } else {
-            target.delete(op.position, op.count);
+            const count = this.normalizeDeleteCount(op.count, target.length, position);
+            if (count === 0) {
+                return;
+            }
+            target.delete(position, count);
         }
     }
 
