@@ -1,6 +1,6 @@
 {
   "name": "@csbenjamin/ymmutable",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Transform yjs in immutable objects",
   "main": "lib/index.js",
   "module": "lib/index.mjs",
@@ -57,9 +57,9 @@
     "lib/**/*"
   ],
   "peerDependencies": {
-    "@csbenjamin/common": "^1.1.9",
+    "@csbenjamin/common": "^1.3.1",
     "rxjs": "^7.8.1",
     "y-utility": "^0.1.4",
-    "yjs": "^13.6.19"
+    "yjs": "^13.6.31"
   }
 }
