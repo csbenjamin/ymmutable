@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
-import { merge, Observable, ReplaySubject, Subject } from 'rxjs';
-import { debounce, debounceTime } from 'rxjs/operators';
+import { merge, Observable, ReplaySubject, Subject, timer } from 'rxjs';
+import { debounce, switchMap, takeUntil } from 'rxjs/operators';
 import { YMultiDocUndoManager } from 'y-utility/y-multidoc-undomanager';
 import { OperationsRecorderProxy, OperationsCompressor, OperationsApplierJson, OperationsApplierYjs, YDocType, YMMUTABLE_ID } from '.';
 import { ID, DeepReadonly } from '@csbenjamin/common';
@@ -22,6 +22,7 @@ export class Ymmutable<S extends Object> implements YDocType {
   private handle: any;
   private doc = new Y.Doc();
   private debounceSubject = new Subject<void>();
+  private destroySubject = new Subject<void>();
   private isPending = false;
   private pendingUpdates: Uint8Array[] = [];
   private remoteReference = {};
@@ -83,7 +84,12 @@ export class Ymmutable<S extends Object> implements YDocType {
       this.immutable = opApplierJson.applyOperations(this.immutable, [op]);
       this.changeSubject.next({ currentValue: this.immutable, oldValue });
     });
-    merge(this.debounceSubject.pipe(debounceTime(debounceDuration)), this.flushSubject).subscribe(() => {
+    merge(
+      this.debounceSubject.pipe(
+        switchMap(() => timer(debounceDuration).pipe(takeUntil(this.flushSubject)))
+      ),
+      this.flushSubject
+    ).pipe(takeUntil(this.destroySubject)).subscribe(() => {
       this.isPending = false;
       if (this.destroyed) {
         return;
@@ -184,6 +190,9 @@ export class Ymmutable<S extends Object> implements YDocType {
   }
 
   public flush() {
+    if (this.destroyed) {
+      return;
+    }
     this.flushSubject.next();
   }
 
@@ -314,7 +323,11 @@ export class Ymmutable<S extends Object> implements YDocType {
     if (this.destroyed) {
       return;
     }
+    this.flush();
     this.destroyed = true;
+    this.destroySubject.next();
+    this.destroySubject.complete();
+    this.debounceSubject.complete();
     const yRootMap = this.doc.getMap();
     if (this.undoManager) {
       this.undoManager.removeTrackedOrigin(this);

@@ -135,6 +135,38 @@ describe('Ymmutable', () => {
         expect(onUpdateSpy).not.toHaveBeenCalled();
     });
 
+    it('flush should apply pending operations and cancel the debounce timer', () => {
+        const onUpdateSpy = jest.fn();
+        ymmutable.onUpdate.subscribe(onUpdateSpy);
+
+        ymmutable.mutate((d) => {
+            d.foo = 'bar';
+        });
+        jest.advanceTimersByTime(1);
+
+        ymmutable.flush();
+
+        expect(onUpdateSpy).toHaveBeenCalledTimes(1);
+        expect(jest.getTimerCount()).toBe(0);
+        jest.advanceTimersByTime(2000);
+        expect(onUpdateSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('destroy should flush pending operations before closing', () => {
+        const updates: Uint8Array[] = [];
+        ymmutable.onUpdate.subscribe(update => updates.push(update));
+        ymmutable.mutate((d) => {
+            d.foo = 'persisted';
+        });
+
+        ymmutable.destroy();
+
+        const doc = new Y.Doc();
+        updates.forEach(update => Y.applyUpdateV2(doc, update));
+        expect(doc.getMap().toJSON()).toEqual({ foo: 'persisted' });
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
     it('applyUpdates with empty array should not throw', () => {
         expect(() => ymmutable.applyUpdates([])).not.toThrow();
     });
