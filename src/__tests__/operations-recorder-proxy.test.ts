@@ -325,6 +325,80 @@ describe('OperationsRecorderProxy', () => {
         }).toThrowError('Not implemented');
     });
 
+    it('should reject mutations through a proxy removed by splice', () => {
+        const retained = objectProxy.proxy.g[0];
+
+        objectProxy.proxy.g.splice(0, 1);
+
+        expect(() => {
+            retained.id = 10;
+        }).toThrowError('Cannot mutate a detached proxy');
+        expect(objectProxy.proxy.g[0].id).toBe(3);
+        expect(operations).toEqual([
+            { operation: 'delete', path: ['g'], position: 0, count: 1 },
+        ]);
+    });
+
+    it('should disconnect nested proxies when their parent is removed', () => {
+        const proxy = new OperationsRecorderProxy({
+            items: [{ values: [1, 2] }],
+        });
+        const values = proxy.proxy.items[0].values;
+
+        proxy.proxy.items.splice(0, 1);
+
+        expect(() => {
+            values.push(3);
+        }).toThrowError('Cannot mutate a detached proxy');
+    });
+
+    it('should keep proxies connected when splice only shifts their index', () => {
+        const retained = objectProxy.proxy.g[1];
+
+        objectProxy.proxy.g.splice(0, 1);
+        retained.id = 30;
+
+        expect(objectProxy.proxy.g[0].id).toBe(30);
+        expect(operations).toEqual([
+            { operation: 'delete', path: ['g'], position: 0, count: 1 },
+            { operation: 'set', path: ['g', 0, 'id'], value: 30 },
+        ]);
+    });
+
+    it('should disconnect proxies retained across setObject', () => {
+        const retained = objectProxy.proxy.b;
+
+        objectProxy.setObject({
+            ...initialObject,
+            b: { c: 3 },
+        });
+
+        expect(() => {
+            retained.c = 4;
+        }).toThrowError('Cannot mutate a detached proxy');
+
+        objectProxy.proxy.b.c = 5;
+        expect(operations).toEqual([
+            { operation: 'set', path: ['b', 'c'], value: 5 },
+        ]);
+    });
+
+    it('should disconnect a retained proxy when its property is replaced', () => {
+        const retained = objectProxy.proxy.b;
+
+        objectProxy.proxy.b = { c: 3 };
+
+        expect(() => {
+            retained.c = 4;
+        }).toThrowError('Cannot mutate a detached proxy');
+
+        objectProxy.proxy.b.c = 5;
+        expect(operations).toEqual([
+            { operation: 'set', path: ['b'], value: { c: 3 } },
+            { operation: 'set', path: ['b', 'c'], value: 5 },
+        ]);
+    });
+
     it('should track find and set operations on nested objects', () => {
         const obj = { items: [{ id: 1, name: 'first' }, { id: 2, name: 'second' }] };
         const proxy = new OperationsRecorderProxy(obj);

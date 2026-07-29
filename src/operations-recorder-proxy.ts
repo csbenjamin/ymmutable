@@ -9,6 +9,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
     private _operations = new Subject<Operation>();
     public operations = this._operations.asObservable();
     private proxyCache: WeakMap<object, any>;
+    private detachedTargets: WeakSet<object> = new WeakSet();
     public abstractTypeFound = false;
     private idToPathMap: Map<object, Array<string | number>> = new Map(); // Mapa de IDs para paths, preenchido sob demanda
 
@@ -20,9 +21,39 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
     }
 
     setObject(obj: T) {
+        this.markDetached(this.initialObject);
+        this.idToPathMap.clear();
         this.initialObject = this.deepClone(obj, true);
         this.proxy = this.createProxy([], this.initialObject);
-        this.idToPathMap.clear();
+    }
+
+    private markDetached(target: any): void {
+        if (target === null || typeof target !== 'object') {
+            return;
+        }
+        if (target.__isProxy) {
+            target = target.__target;
+        }
+        if (
+            this.detachedTargets.has(target)
+            || (!Array.isArray(target) && target.constructor !== Object)
+        ) {
+            return;
+        }
+        this.detachedTargets.add(target);
+        const id = target[YMMUTABLE_ID];
+        if (id) {
+            this.idToPathMap.delete(id);
+        }
+        for (const key of Object.keys(target)) {
+            this.markDetached(target[key]);
+        }
+    }
+
+    private assertConnected(target: object): void {
+        if (this.detachedTargets.has(target)) {
+            throw new Error('Cannot mutate a detached proxy');
+        }
     }
 
     private deepClone(obj: any, preserveId: boolean): any {
@@ -134,9 +165,13 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
     }
 
     private applyArraySplice(obj: any[], path: Array<string | number>, args: any[]) {
+        this.assertConnected(obj);
         const { start, deleteCount, items: rawItems } = this.normalizeSpliceArgs(obj.length, args);
         const items = rawItems.map(item => this.deepClone(item, false));
         const result = obj.splice(start, deleteCount, ...items);
+        for (const removedItem of result) {
+            this.markDetached(removedItem);
+        }
         const currentPath = this.getCurrentPath(obj, path);
 
         if (deleteCount > 0) {
@@ -233,6 +268,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                 return value;
             },
             set: (obj, prop, value) => {
+                this.assertConnected(obj);
                 if (obj[prop] === value) return true;
                 value = this.deepClone(value, false);
 
@@ -248,6 +284,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                 if (typeof propKey === 'number' && Array.isArray(obj) && propKey >= obj.length) {
                     throw new Error('Key not found');
                 }
+                this.markDetached(obj[propKey]);
                 obj[propKey] = value;
 
                 // Usa o path atualizado do mapa, se disponível
@@ -263,6 +300,7 @@ export class OperationsRecorderProxy<T extends object> implements OperationsReco
                 return true;
             },
             deleteProperty: (obj, prop) => {
+                this.assertConnected(obj);
                 throw new Error('Not implemented');
             }
         };
